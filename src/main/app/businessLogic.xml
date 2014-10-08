@@ -23,28 +23,41 @@ http://www.mulesoft.org/schema/mule/servicenow http://www.mulesoft.org/schema/mu
             <custom-filter doc:name="Filter duplicate workers" class="org.mule.kicks.WorkersDeduplicationFilter"/>
         </batch:input> 
         <batch:process-records>
-            <batch:step name="Get_Last_Modified_Date">
+            <batch:step name="GetLastModifiedDate">
                 <enricher source="payload" target="#[recordVars['lastModifiedDate']]" doc:name="store the value in 'recordVars['lastModifiedDate']'">
                     <custom-transformer class="org.mule.kicks.TransactionLogProcessor" doc:name="Iterate through transaction logs"/>
                 </enricher>
             </batch:step>
             <batch:step name="getUserInSnowStep">
-
                 <enricher source="#[payload]" target="#[recordVars['userInSnow']]" doc:name="store result in record var 'userInSnow'">
-                    <servicenow:get-records config-ref="ServiceNow" type="SYS_USER" doc:name="query user to be upserted in ServiceNow">
-                            <servicenow:get-records-request>
-                                <servicenow:get-records-request key="firstName">#[payload.workerData.getPersonalData().getNameData().getPreferredNameData().getNameDetailData().getFirstName()]</servicenow:get-records-request>
-                                <servicenow:get-records-request key="lastName">#[payload.workerData.getPersonalData().getNameData().getPreferredNameData().getNameDetailData().getLastName()]</servicenow:get-records-request>
-                                <servicenow:get-records-request key="email">#[payload.workerData.getPersonalData().getContactData().getEmailAddressData().get(0).getEmailAddress()]</servicenow:get-records-request>
-                            </servicenow:get-records-request>
-                    </servicenow:get-records>					
+                    <choice doc:name="Choice">
+                        <when expression="#[payload.workerData.userAccountData == null]">
+                            <servicenow:get-records config-ref="ServiceNow" type="SYS_USER" doc:name="query user in ServiceNow by email and name">
+                                <servicenow:get-records-request>
+                                    <servicenow:get-records-request key="lastName">#[payload.workerData.getPersonalData().getNameData().getPreferredNameData().getNameDetailData().getLastName()]</servicenow:get-records-request>
+                                    <servicenow:get-records-request key="email">#[payload.workerData.getPersonalData().getContactData().getEmailAddressData().get(0).getEmailAddress()]</servicenow:get-records-request>
+                                    <servicenow:get-records-request key="firstName">#[payload.workerData.getPersonalData().getNameData().getPreferredNameData().getNameDetailData().getFirstName()]</servicenow:get-records-request>
+                                </servicenow:get-records-request>
+                            </servicenow:get-records>
+                        </when>
+                        <when expression="#[payload.workerData.userAccountData != null &amp;&amp; payload.workerData.userAccountData.userName != null]">
+                            <servicenow:get-records config-ref="ServiceNow" type="SYS_USER" doc:name="query user in ServiceNow by username">
+                                <servicenow:get-records-request>
+                                    <servicenow:get-records-request key="userName">#[payload.workerData.userAccountData.userName]</servicenow:get-records-request>
+                                </servicenow:get-records-request>
+                            </servicenow:get-records>
+                        </when>
+                        <otherwise>
+                            <set-payload value="#[return null]" doc:name="Set Payload"/>
+                        </otherwise>
+                    </choice>
                 </enricher>
+
  
             </batch:step>
             <batch:step name="Map_Workday_Worker_to_Snow_Map">
                 <data-mapper:transform config-ref="List_WorkerType__To_Map" doc:name="WorkerType To Map"/>
 
-                <expression-component doc:name="Set Last Modified Date"><![CDATA[payload.LastModifiedDate = recordVars['lastModifiedDate']]]></expression-component>
             </batch:step>
 
             <batch:step name="selectNewerUserStep" filter-expression="#[recordVars['userInSnow'] is NullPayload]">
@@ -61,6 +74,7 @@ http://www.mulesoft.org/schema/mule/servicenow http://www.mulesoft.org/schema/mu
             <batch:step name="createUsersInServiceNowStep" accept-expression="!(payload instanceof NullPayload) &amp;&amp; payload['sysId'] == null">
  
                 <logger message="User to create: #[payload]" level="INFO" doc:name="Log user to create"/>
+                <expression-component doc:name="Expression"><![CDATA[payload.remove('username');]]></expression-component>
                 <servicenow:insert config-ref="ServiceNow" type="SYS_USER" doc:name="ServiceNow">
                     <servicenow:insert-request ref="#[payload]"/>
                 </servicenow:insert>

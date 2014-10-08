@@ -15,6 +15,8 @@ import org.mule.transport.NullPayload;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.workday.hr.EventTargetTransactionLogEntryDataType;
+import com.workday.hr.TransactionLogEntryType;
 import com.workday.hr.WorkerType;
 /**
 * The filter that's removing records from the payload with the same email address.
@@ -35,8 +37,19 @@ public class WorkersDeduplicationFilter implements Filter {
 		List<String> emails = new ArrayList<String>();
 		Iterator<WorkerType> iterator = payload.iterator();
 		logger.info("total records:" + payload.size());
+		
 		while (iterator.hasNext()) {
 			WorkerType next = iterator.next();
+			EventTargetTransactionLogEntryDataType log = next.getWorkerData().getTransactionLogEntryData();
+			
+			if (log != null) {
+				for (TransactionLogEntryType entry : log.getTransactionLogEntry()){	
+					if (entry.getTransactionLogData().getTransactionLogDescription().startsWith("Terminate:")){
+						iterator.remove();
+						continue;
+					}
+				}
+			}
 			if (next.getWorkerData().getPersonalData().getContactData().getEmailAddressData().isEmpty()){
 				iterator.remove();
 				continue;
@@ -50,6 +63,7 @@ public class WorkersDeduplicationFilter implements Filter {
 		}
 		
 		logger.info("unique emails:" + emails.size());
+		logger.info("employed workers:" + payload.size());
 		return true;
 	}
 }

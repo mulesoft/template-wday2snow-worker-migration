@@ -27,9 +27,6 @@ public class UserDateComparator {
 		
 		DateTime lastModifiedDateOfA = formatter.parseDateTime(userA).minusHours(utcOffset);
 		DateTime lastModifiedDateOfB = snowFormatter.parseDateTime(snowUsers.getGetRecordsResult().get(0).getSysUpdatedOn());
-		System.out.println("user name : " + snowUsers.getGetRecordsResult().get(0).getFirstName() + " " + snowUsers.getGetRecordsResult().get(0).getLastName());
-		System.out.println("wday last date: " + lastModifiedDateOfA.toDate());
-		System.out.println("snow last date: " + lastModifiedDateOfB.toDate());
 		return lastModifiedDateOfA.isAfter(lastModifiedDateOfB);
 	}
 }

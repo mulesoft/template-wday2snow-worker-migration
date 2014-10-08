@@ -42,10 +42,11 @@ public class WorkersRequest {
 		TransactionLogCriteriaType log = new TransactionLogCriteriaType();
 		log.setTransactionDateRangeData(dateRangeData);
 		
-		transactionLogCriteriaData.add(log );
+		transactionLogCriteriaData.add(log);
 		crit.setTransactionLogCriteriaData(transactionLogCriteriaData );
-		getWorkersType.setRequestCriteria(crit );
-		crit.setExcludeInactiveWorkers(true);
+		crit.setExcludeInactiveWorkers(true);	
+		getWorkersType.setRequestCriteria(crit);
+		
 		WorkerResponseGroupType resGroup = new WorkerResponseGroupType();
 		resGroup.setIncludeRoles(true);	
 		resGroup.setIncludePersonalInformation(true);
