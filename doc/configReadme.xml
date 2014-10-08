@@ -48,6 +48,7 @@ After this, to trigger the use case you just need to hit the local http endpoint
 		<![CDATA[
 + http.port `9090`
 + migration.startDate `"2014-09-12T00:00:00.000+0200"`
++ utc.offset `2`
 
 #### Workday Connector configuration
 + wday.user `admin@workday`
