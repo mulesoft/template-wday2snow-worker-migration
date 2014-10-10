@@ -43,13 +43,19 @@ public class WorkersDeduplicationFilter implements Filter {
 			EventTargetTransactionLogEntryDataType log = next.getWorkerData().getTransactionLogEntryData();
 			
 			if (log != null) {
+				boolean was = false;
 				for (TransactionLogEntryType entry : log.getTransactionLogEntry()){	
 					if (entry.getTransactionLogData().getTransactionLogDescription().startsWith("Terminate:")){
 						iterator.remove();
-						continue;
+						was = true;
+						break;
 					}
 				}
+				if (was){
+					continue;		
+				}
 			}
+			
 			if (next.getWorkerData().getPersonalData().getContactData().getEmailAddressData().isEmpty()){
 				iterator.remove();
 				continue;

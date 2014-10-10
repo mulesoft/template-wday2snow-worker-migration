@@ -48,6 +48,11 @@ public class TransactionLogProcessor implements MessageProcessor{
 								if (lastModifiedDate == null || (lastModifiedDate != null && entry.getTransactionLogData().getTransactionEntryMoment().compare(lastModifiedDate) > 0))
 									lastModifiedDate = entry.getTransactionLogData().getTransactionEntryMoment();
 							}
+							else{
+								if (lastModifiedDate == null) {
+									lastModifiedDate = entry.getTransactionLogData().getTransactionEntryMoment();
+								}
+							}
 					}								
 				}
 			} catch (DatatypeConfigurationException e1) {

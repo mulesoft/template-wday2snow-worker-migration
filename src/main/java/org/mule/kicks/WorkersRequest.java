@@ -44,7 +44,6 @@ public class WorkersRequest {
 		
 		transactionLogCriteriaData.add(log);
 		crit.setTransactionLogCriteriaData(transactionLogCriteriaData );
-		crit.setExcludeInactiveWorkers(true);	
 		getWorkersType.setRequestCriteria(crit);
 		
 		WorkerResponseGroupType resGroup = new WorkerResponseGroupType();
