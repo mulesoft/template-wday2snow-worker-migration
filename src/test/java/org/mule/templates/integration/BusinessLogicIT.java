@@ -6,16 +6,12 @@
 
 package org.mule.templates.integration;
 
+import java.io.FileInputStream;
 import java.text.SimpleDateFormat;
-import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Date;
-import java.util.GregorianCalendar;
-import java.util.List;
-
-import javax.xml.datatype.DatatypeConfigurationException;
-import javax.xml.datatype.DatatypeFactory;
-import javax.xml.datatype.XMLGregorianCalendar;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
 
 import org.junit.After;
 import org.junit.Assert;
@@ -26,19 +22,9 @@ import org.mule.MessageExchangePattern;
 import org.mule.api.MuleEvent;
 import org.mule.api.MuleException;
 import org.mule.processor.chain.SubflowInterceptingChainLifecycleWrapper;
-import org.mule.templates.utils.Employee;
 
 import com.mulesoft.module.batch.BatchTestHelper;
 import com.servicenow.sysuser.GetRecordsResponse;
-import com.workday.hr.EmployeeGetType;
-import com.workday.hr.EmployeeReferenceType;
-import com.workday.hr.ExternalIntegrationIDReferenceDataType;
-import com.workday.hr.IDType;
-import com.workday.staffing.EventClassificationSubcategoryObjectIDType;
-import com.workday.staffing.EventClassificationSubcategoryObjectType;
-import com.workday.staffing.TerminateEmployeeDataType;
-import com.workday.staffing.TerminateEmployeeRequestType;
-import com.workday.staffing.TerminateEventDataType;
 
 /**
  * The objective of this class is to validate the correct behavior of the flows
@@ -47,17 +33,18 @@ import com.workday.staffing.TerminateEventDataType;
  */
 public class BusinessLogicIT extends AbstractTemplateTestCase {
 
-	private static final String TEMPLATE_PREFIX = "wday2snow-worker-migration";
-	
 	protected static final int TIMEOUT_SEC = 60;
 	private BatchTestHelper helper;
-	private static final String PHONE_NUMBER = "650-232-2323";
+	private static final String PHONE_NUMBER = "232-2323";
 	private static final String STREET = "999 Main St";
 	private static final String CITY = "San Francisco";
-	private static final String LAST_NAME = "Willis1";
-	private String EXT_ID, EMAIL = TEMPLATE_PREFIX + System.currentTimeMillis() + "@test.com";
-	private Employee employee;
+	private static final Object FIRST_NAME = "Bruce";
+	private static final String LAST_NAME = "Willis";
+	private final String EMAIL = "bwillis@gmailtest.com";
 	private String SNOW_ID;
+	private static final String PATH_TO_TEST_PROPERTIES = "./src/test/resources/mule.test.properties";
+	private Map<String, String> user = new HashMap<String, String>();	
+	private static String WORKDAY_ID;
 	
 	@BeforeClass
 	public static void init(){
@@ -68,7 +55,14 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 	
 	@Before
 	public void setUp() throws Exception {
-		helper = new BatchTestHelper(muleContext);
+		final Properties props = new Properties();
+    	try {
+    		props.load(new FileInputStream(PATH_TO_TEST_PROPERTIES));
+    	} catch (Exception e) {
+    	   logger.error("Error occured while reading mule.test.properties", e);
+    	} 
+    	WORKDAY_ID = props.getProperty("wday.testuser.id");
+    	helper = new BatchTestHelper(muleContext);
 		createTestDataInSandBox();
 	}
 
@@ -93,35 +87,24 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 		logger.info("snow users: " + snowRes.getGetRecordsResult().size());
 		
 		Assert.assertTrue("There should be a user in ServiceNow.", snowRes.getGetRecordsResult().size() == 1);
-		Assert.assertEquals("First name should be set", snowRes.getGetRecordsResult().get(0).getFirstName(), EXT_ID);
+		Assert.assertEquals("First name should be set", snowRes.getGetRecordsResult().get(0).getFirstName(), FIRST_NAME);
 		Assert.assertEquals("Last name should be set", snowRes.getGetRecordsResult().get(0).getLastName(), LAST_NAME);
 		Assert.assertEquals("City should be set", snowRes.getGetRecordsResult().get(0).getCity(), CITY);
-		Assert.assertEquals("Street should be set", snowRes.getGetRecordsResult().get(0).getStreet(), STREET);		
+		Assert.assertEquals("Street should be set", snowRes.getGetRecordsResult().get(0).getStreet(), user.get("Street"));		
 		Assert.assertEquals("Home Phone number should be set", snowRes.getGetRecordsResult().get(0).getHomePhone(), "+1  " + PHONE_NUMBER);		
 		
 		SNOW_ID = snowRes.getGetRecordsResult().get(0).getSysId();
 	}
 
-	@SuppressWarnings("unchecked")
 	private void createTestDataInSandBox() throws MuleException, Exception {
-		SubflowInterceptingChainLifecycleWrapper flow = getSubFlow("hireEmployee");
+		SubflowInterceptingChainLifecycleWrapper flow = getSubFlow("updateWorkdayEmployee");
 		flow.initialise();
-		logger.info("creating a workday employee...");
+		logger.info("updating a workday employee...");
 		try {
-			flow.process(getTestEvent(prepareNewHire(), MessageExchangePattern.REQUEST_RESPONSE));						
+			flow.process(getTestEvent(prepareEdit(), MessageExchangePattern.REQUEST_RESPONSE));						
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-	}
-
-	private List<Object> prepareNewHire(){
-		EXT_ID = TEMPLATE_PREFIX + System.currentTimeMillis();
-		logger.info("employee name: " + EXT_ID + ", email: " + EMAIL);
-		employee = new Employee(EXT_ID, LAST_NAME, EMAIL, PHONE_NUMBER, STREET, CITY, "CA", "94105", "US", "o7aHYfwG", 
-				"2014-04-17-07:00", "2014-04-21-07:00", "QA Engineer", "San_Francisco_site", "Regular", "Full Time", "Salary", "USD", "140000", "Annual", "39905", "21440", EXT_ID);
-		List<Object> list = new ArrayList<Object>();
-		list.add(employee);
-		return list;
 	}
 	
 	private void deleteTestDataFromSandBox() throws MuleException, Exception {
@@ -131,55 +114,20 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 		flow.initialise();		
 		flow.process(getTestEvent(SNOW_ID));				
 		
-		// Delete the created users in Workday
-		flow = getSubFlow("getWorkdayEmployee");
-		flow.initialise();
-		
-		try {
-			MuleEvent response = flow.process(getTestEvent(getEmployee(), MessageExchangePattern.REQUEST_RESPONSE));			
-			flow = getSubFlow("terminateWorkdayEmployee");
-			flow.initialise();
-			flow.process(getTestEvent(prepareTerminate(response), MessageExchangePattern.REQUEST_RESPONSE));								
-		} catch (Exception e) {
-			e.printStackTrace();
-		}	
-
+		// Workday test data do not need to be deleted, will be reused next time
 	}
 	
-	private TerminateEmployeeRequestType prepareTerminate(MuleEvent response) throws DatatypeConfigurationException{
-		TerminateEmployeeRequestType req = (TerminateEmployeeRequestType) response.getMessage().getPayload();
-		TerminateEmployeeDataType eeData = req.getTerminateEmployeeData();		
-		TerminateEventDataType event = new TerminateEventDataType();
-		eeData.setTerminationDate(xmlDate(new Date()));
-		EventClassificationSubcategoryObjectType prim = new EventClassificationSubcategoryObjectType();
-		List<EventClassificationSubcategoryObjectIDType> list = new ArrayList<EventClassificationSubcategoryObjectIDType>();
-		EventClassificationSubcategoryObjectIDType id = new EventClassificationSubcategoryObjectIDType();
-		id.setType("WID");
-		id.setValue("208082cd6b66443e801d95ffdc77461b");
-		list.add(id);
-		prim.setID(list);
-		event.setPrimaryReasonReference(prim);
-		eeData.setTerminateEventData(event );
-		return req;		
+	private Map<String, String> prepareEdit(){			
+		user.put("Location", "San_Francisco_site");
+		user.put("Phone", PHONE_NUMBER);
+		user.put("Email", EMAIL);
+		user.put("ExtId__c", WORKDAY_ID);
+		user.put("Street", STREET + System.currentTimeMillis());
+		user.put("Country", "USA");
+		user.put("State", "USA-CA");
+		user.put("City", CITY);
+		user.put("PostalCode", "94105");
+		return user;
 	}
 	
-	private static XMLGregorianCalendar xmlDate(Date date) throws DatatypeConfigurationException {
-		GregorianCalendar gregorianCalendar = (GregorianCalendar) GregorianCalendar.getInstance();
-		gregorianCalendar.setTime(date);
-		return DatatypeFactory.newInstance().newXMLGregorianCalendar(gregorianCalendar);
-	}
-
-	
-	private EmployeeGetType getEmployee(){
-		EmployeeGetType get = new EmployeeGetType();
-		EmployeeReferenceType empRef = new EmployeeReferenceType();					
-		ExternalIntegrationIDReferenceDataType value = new ExternalIntegrationIDReferenceDataType();
-		IDType idType = new IDType();
-		value.setID(idType);
-		idType.setSystemID("Salesforce - Chatter");
-		idType.setValue(EXT_ID);			
-		empRef.setIntegrationIDReference(value);
-		get.setEmployeeReference(empRef);		
-		return get;
-	}
 }

@@ -3,4 +3,5 @@
     <name>template-wday2snow-worker-migration</name>
     <description></description>
     <muleExtension name="ServiceNow" qualifier="org.mule.tooling.ui.contribution.servicenow.3.5.0"/>
+    <muleExtension name="Workday Human Resource" qualifier="org.mule.tooling.ui.contribution.wd-hr"/>
 </mule-project>

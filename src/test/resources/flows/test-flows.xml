@@ -13,23 +13,10 @@ http://www.mulesoft.org/schema/mule/servicenow http://www.mulesoft.org/schema/mu
     <wd-staffing:config name="Workday_Staffing" staffingUser="${wday.user}" staffingPassword="${wday.password}" staffingEndpoint="${wday.endpoint}" doc:name="Workday Staffing">
         <wd-staffing:connection-pooling-profile initialisationPolicy="INITIALISE_ONE" exhaustedAction="WHEN_EXHAUSTED_GROW"/>
     </wd-staffing:config>
-    <data-mapper:config name="pojo_to_hireemployeerequesttype" transformationGraphPath="pojo_to_hireemployeerequesttype.grf" doc:name="DataMapper"/>
-    <data-mapper:config name="EmployeeType_To_TerminateEmployeeRequestType" transformationGraphPath="employeetype_to_terminateemployeerequesttype.grf" doc:name="DataMapper"/>
-    <sub-flow name="hireEmployee" doc:name="hireEmployee">
-        <data-mapper:transform config-ref="pojo_to_hireemployeerequesttype" doc:name="Jobvite To HireEmployeeRequestType" />
-        <wd-staffing:hire-employee config-ref="Workday_Staffing" doc:name="Workday Staffing"/>
-                    
-    </sub-flow>
-    
-    <sub-flow name="getWorkdayEmployee" doc:name="getWorkdayEmployee">
-        <wd-hr:get-employee config-ref="Workday_Human_Resource" doc:name="Workday Human Resource"/>
-        <data-mapper:transform doc:name="EmployeeType To TerminateEmployeeRequestType" config-ref="EmployeeType_To_TerminateEmployeeRequestType"/>
-	</sub-flow>
-    
+    <data-mapper:config name="User_To_Contact" transformationGraphPath="user_to_maintaincontactinformationforpersoneventrequesttype.grf" doc:name="DataMapper"/>
     <sub-flow name="terminateWorkdayEmployee" doc:name="terminateWorkdayEmployee">
     	<wd-staffing:terminate-employee config-ref="Workday_Staffing" doc:name="Workday Staffing" />
     </sub-flow>
-    
     <sub-flow name="deleteSnowUsers" doc:name="deleteSnowUsers">
         <servicenow:delete-record config-ref="ServiceNow" type="SYS_USER" doc:name="delete user in ServiceNow">
             <servicenow:delete-request>
@@ -37,12 +24,15 @@ http://www.mulesoft.org/schema/mule/servicenow http://www.mulesoft.org/schema/mu
             </servicenow:delete-request>
         </servicenow:delete-record>
     </sub-flow>
-    
     <sub-flow name="getSnowUsers" doc:name="getSnowUsers">
         <servicenow:get-records config-ref="ServiceNow" type="SYS_USER" doc:name="query user in ServiceNow">
              <servicenow:get-records-request>
                  <servicenow:get-records-request key="email">#[payload]</servicenow:get-records-request>
              </servicenow:get-records-request>
          </servicenow:get-records>
+    </sub-flow>
+    <sub-flow name="updateWorkdayEmployee" doc:name="updateWorkdayEmployee">
+        <data-mapper:transform doc:name="DataMapper" config-ref="User_To_Contact"/>
+        <wd-hr:maintain-contact-information config-ref="Workday_Human_Resource" doc:name="Workday Human Resource"/>
     </sub-flow>
 </mule>
