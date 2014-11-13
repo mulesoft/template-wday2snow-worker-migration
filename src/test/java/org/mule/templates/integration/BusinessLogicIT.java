@@ -24,7 +24,7 @@ import org.mule.api.MuleException;
 import org.mule.processor.chain.SubflowInterceptingChainLifecycleWrapper;
 
 import com.mulesoft.module.batch.BatchTestHelper;
-import com.servicenow.sysuser.GetRecordsResponse;
+import com.servicenow.usermanagement.sysuser.GetRecordsResponse;
 
 /**
  * The objective of this class is to validate the correct behavior of the flows
@@ -38,9 +38,7 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 	private static final String PHONE_NUMBER = "232-2323";
 	private static final String STREET = "999 Main St";
 	private static final String CITY = "San Francisco";
-	private static final Object FIRST_NAME = "Bruce";
-	private static final String LAST_NAME = "Willis";
-	private final String EMAIL = "bwillis@gmailtest.com";
+	private final String EMAIL = "darko.vukovic@mulesoft.com";
 	private String SNOW_ID;
 	private static final String PATH_TO_TEST_PROPERTIES = "./src/test/resources/mule.test.properties";
 	private Map<String, String> user = new HashMap<String, String>();	
@@ -87,11 +85,7 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 		logger.info("snow users: " + snowRes.getGetRecordsResult().size());
 		
 		Assert.assertTrue("There should be a user in ServiceNow.", snowRes.getGetRecordsResult().size() == 1);
-		Assert.assertEquals("First name should be set", snowRes.getGetRecordsResult().get(0).getFirstName(), FIRST_NAME);
-		Assert.assertEquals("Last name should be set", snowRes.getGetRecordsResult().get(0).getLastName(), LAST_NAME);
-		Assert.assertEquals("City should be set", snowRes.getGetRecordsResult().get(0).getCity(), CITY);
-		Assert.assertEquals("Street should be set", snowRes.getGetRecordsResult().get(0).getStreet(), user.get("Street"));		
-		Assert.assertEquals("Home Phone number should be set", snowRes.getGetRecordsResult().get(0).getHomePhone(), "+1  " + PHONE_NUMBER);		
+		Assert.assertEquals("Street should be set", snowRes.getGetRecordsResult().get(0).getStreet(), user.get("Street"));				
 		
 		SNOW_ID = snowRes.getGetRecordsResult().get(0).getSysId();
 	}
@@ -127,6 +121,7 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 		user.put("State", "USA-CA");
 		user.put("City", CITY);
 		user.put("PostalCode", "94105");
+		user.put("LastModifiedDate", String.valueOf(System.currentTimeMillis()));
 		return user;
 	}
 	

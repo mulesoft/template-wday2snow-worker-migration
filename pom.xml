@@ -6,7 +6,7 @@
 	<parent>
 		<groupId>org.mule.templates</groupId>
 		<artifactId>templates-tooling-parent-pom</artifactId>
-		<version>1.0.0-SNAPSHOT</version>
+		<version>1.0.6</version>
 	</parent>
 
 	<artifactId>template-wday2snow-worker-migration</artifactId>
@@ -15,8 +15,8 @@
 	<name>template-wday2snow-worker-migration Anypoint Template Project</name>
 
 	<properties>
-		<workday.version>3.0.0</workday.version>
-		<snow.version>2.0.0</snow.version>		
+		<workday.version>4.0.1</workday.version>
+		<snow.version>3.0.0</snow.version>	
 	</properties>
 
 	<build>
@@ -45,14 +45,9 @@
 		</dependency>
 		<dependency>
 			<groupId>org.mule.modules</groupId>
-			<artifactId>mule-module-service-now</artifactId>
+			<artifactId>mule-module-servicenow</artifactId>
 			<version>${snow.version}</version>
 		</dependency>
-	<dependency>
-            <groupId>org.mule.modules</groupId>
-            <artifactId>mule-module-servicenow</artifactId>
-            <version>3.0.0</version>
-        </dependency>
     <dependency>
             <groupId>org.mule.modules</groupId>
             <artifactId>mule-module-spring-config</artifactId>

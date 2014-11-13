@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:servicenow="http://www.mulesoft.org/schema/mule/servicenow" xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:data-mapper="http://www.mulesoft.org/schema/mule/ee/data-mapper" xmlns:wd-hr="http://www.mulesoft.org/schema/mule/wd-hr" xmlns:stdio="http://www.mulesoft.org/schema/mule/stdio" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:smtp="http://www.mulesoft.org/schema/mule/smtp" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.5.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/stdio http://www.mulesoft.org/schema/mule/stdio/current/mule-stdio.xsd
+<mule xmlns:servicenow="http://www.mulesoft.org/schema/mule/servicenow" xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" xmlns:data-mapper="http://www.mulesoft.org/schema/mule/ee/data-mapper" xmlns:wd-hr="http://www.mulesoft.org/schema/mule/wd-hr" xmlns:stdio="http://www.mulesoft.org/schema/mule/stdio" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:smtp="http://www.mulesoft.org/schema/mule/smtp" xmlns:json="http://www.mulesoft.org/schema/mule/json" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:batch="http://www.mulesoft.org/schema/mule/batch" xmlns:sfdc="http://www.mulesoft.org/schema/mule/sfdc" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.5.2" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/stdio http://www.mulesoft.org/schema/mule/stdio/current/mule-stdio.xsd
 http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
@@ -19,15 +19,12 @@ http://www.mulesoft.org/schema/mule/servicenow http://www.mulesoft.org/schema/mu
         <batch:threading-profile poolExhaustedAction="WAIT"/>
         <batch:input>
             <wd-hr:get-workers config-ref="Workday_Human_Resource" doc:name="Get Workers from Workday" workersRequest-ref="#[org.mule.templates.WorkersRequest.create(${migration.startDate})]"/>
+
             <set-payload value="#[payload.responseData.worker]" doc:name="Extract a list of Workers"/>
             <custom-filter doc:name="Filter duplicate workers" class="org.mule.templates.WorkersDeduplicationFilter"/>
         </batch:input> 
         <batch:process-records>
-            <batch:step name="GetLastModifiedDate">
-                <enricher source="payload" target="#[recordVars['lastModifiedDate']]" doc:name="store the value in 'recordVars['lastModifiedDate']'">
-                    <custom-transformer class="org.mule.templates.TransactionLogProcessor" doc:name="Iterate through transaction logs"/>
-                </enricher>
-            </batch:step>
+
             <batch:step name="getUserInSnowStep">
                 <enricher source="#[payload]" target="#[recordVars['userInSnow']]" doc:name="store result in record var 'userInSnow'">
                     <choice doc:name="Choice">
@@ -55,20 +52,14 @@ http://www.mulesoft.org/schema/mule/servicenow http://www.mulesoft.org/schema/mu
 
  
             </batch:step>
-            <batch:step name="Map_Workday_Worker_to_Snow_Map">
+            <batch:step name="mapWorkdayWorkerToSnowMap">
                 <data-mapper:transform config-ref="List_WorkerType__To_Map" doc:name="WorkerType To Map"/>
 
             </batch:step>
 
-            <batch:step name="selectNewerUserStep" filter-expression="#[recordVars['userInSnow'] is NullPayload]">
-                <choice doc:name="Choice">
-                    <when expression="#[org.mule.templates.UserDateComparator.isAfter(recordVars['lastModifiedDate'], recordVars['userInSnow'], ${utc.offset})]">
-                        <expression-component doc:name="define Id in Service Now instance"><![CDATA[ payload.put('sysId', recordVars['userInSnow'].getGetRecordsResult().isEmpty() ? null : recordVars['userInSnow'].getGetRecordsResult().get(0).getSysId());]]></expression-component> 
-                    </when>
-                    <otherwise>
-                        <set-payload doc:name="set to null to skip this user" value="#[return null]"/>
-                    </otherwise>
-                </choice>
+            <batch:step name="defineIdInServiceNowStep" filter-expression="#[recordVars['userInSnow'] is NullPayload]">
+                <expression-component doc:name="define Id in Service Now instance"><![CDATA[ payload.put('sysId', recordVars['userInSnow'].getGetRecordsResult().isEmpty() ? null : recordVars['userInSnow'].getGetRecordsResult().get(0).getSysId());]]></expression-component>
+
             </batch:step>
 
             <batch:step name="createUsersInServiceNowStep" accept-expression="!(payload instanceof NullPayload) &amp;&amp; payload['sysId'] == null">
@@ -80,7 +71,7 @@ http://www.mulesoft.org/schema/mule/servicenow http://www.mulesoft.org/schema/mu
                 </servicenow:insert>
 
             </batch:step>
-            <batch:step name="UpdateUsersInServiceNowStep" accept-expression="!(payload instanceof NullPayload) &amp;&amp; payload['sysId'] != null &amp;&amp; payload['email'] != null">
+            <batch:step name="updateUsersInServiceNowStep" accept-expression="!(payload instanceof NullPayload) &amp;&amp; payload['sysId'] != null &amp;&amp; payload['email'] != null">
                 <logger message="User to update: #[payload]" level="INFO" doc:name="Log user to update"/>
                 <servicenow:update config-ref="ServiceNow" type="SYS_USER" doc:name="ServiceNow">
                     <servicenow:update-request ref="#[payload]"/>
