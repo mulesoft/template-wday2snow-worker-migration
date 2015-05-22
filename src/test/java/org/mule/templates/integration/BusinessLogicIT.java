@@ -13,6 +13,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.junit.After;
 import org.junit.Assert;
 import org.junit.Before;
@@ -43,6 +45,7 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 	private static final String PATH_TO_TEST_PROPERTIES = "./src/test/resources/mule.test.properties";
 	private Map<String, String> user = new HashMap<String, String>();	
 	private static String WORKDAY_ID;
+	private static final Logger log = LogManager.getLogger(BusinessLogicIT.class);
 	
 	@BeforeClass
 	public static void init(){
@@ -57,7 +60,7 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
     	try {
     		props.load(new FileInputStream(PATH_TO_TEST_PROPERTIES));
     	} catch (Exception e) {
-    	   logger.error("Error occured while reading mule.test.properties", e);
+    		log.error("Error occured while reading mule.test.properties", e);
     	} 
     	WORKDAY_ID = props.getProperty("wday.testuser.id");
     	helper = new BatchTestHelper(muleContext);
@@ -82,7 +85,7 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 		
 		MuleEvent response = flow.process(getTestEvent(EMAIL, MessageExchangePattern.REQUEST_RESPONSE));
 		GetRecordsResponse snowRes = ((GetRecordsResponse)response.getMessage().getPayload());
-		logger.info("snow users: " + snowRes.getGetRecordsResult().size());
+		log.info("snow users: " + snowRes.getGetRecordsResult().size());
 		
 		Assert.assertTrue("There should be a user in ServiceNow.", snowRes.getGetRecordsResult().size() == 1);
 		Assert.assertEquals("Street should be set", snowRes.getGetRecordsResult().get(0).getStreet(), user.get("Street"));				
@@ -93,7 +96,7 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 	private void createTestDataInSandBox() throws MuleException, Exception {
 		SubflowInterceptingChainLifecycleWrapper flow = getSubFlow("updateWorkdayEmployee");
 		flow.initialise();
-		logger.info("updating a workday employee...");
+		log.info("updating a workday employee...");
 		try {
 			flow.process(getTestEvent(prepareEdit(), MessageExchangePattern.REQUEST_RESPONSE));						
 		} catch (Exception e) {
@@ -102,7 +105,7 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 	}
 	
 	private void deleteTestDataFromSandBox() throws MuleException, Exception {
-		logger.info("deleting test data...");
+		log.info("deleting test data...");
 		// Delete the created users in Service Now
     	SubflowInterceptingChainLifecycleWrapper flow = getSubFlow("deleteSnowUsers");
 		flow.initialise();		

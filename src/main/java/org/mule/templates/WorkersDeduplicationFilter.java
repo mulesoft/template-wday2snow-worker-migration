@@ -9,11 +9,11 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.mule.api.MuleMessage;
 import org.mule.api.routing.filter.Filter;
 import org.mule.transport.NullPayload;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.workday.hr.EventTargetTransactionLogEntryDataType;
 import com.workday.hr.TransactionLogEntryType;
@@ -25,7 +25,7 @@ import com.workday.hr.WorkerType;
 */
 public class WorkersDeduplicationFilter implements Filter {
 	
-	Logger logger = LoggerFactory.getLogger(WorkersDeduplicationFilter.class);
+	Logger log = LogManager.getLogger(WorkersDeduplicationFilter.class);
 	
 	@SuppressWarnings("unchecked")
 	@Override
@@ -36,7 +36,7 @@ public class WorkersDeduplicationFilter implements Filter {
 		List<WorkerType> payload = (List<WorkerType>) message.getPayload();
 		List<String> emails = new ArrayList<String>();
 		Iterator<WorkerType> iterator = payload.iterator();
-		logger.info("total records:" + payload.size());
+		log.info("total records:" + payload.size());
 		
 		while (iterator.hasNext()) {
 			WorkerType next = iterator.next();
@@ -68,8 +68,8 @@ public class WorkersDeduplicationFilter implements Filter {
 			}
 		}
 		
-		logger.info("unique emails:" + emails.size());
-		logger.info("employed workers:" + payload.size());
+		log.info("unique emails:" + emails.size());
+		log.info("employed workers:" + payload.size());
 		return true;
 	}
 }

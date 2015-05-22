@@ -1,5 +1,5 @@
 
-# Anypoint Template: Workday ServiceNow Worker Migration
+# Anypoint Template: Workday to ServiceNow Worker Migration
 
 + [License Agreement](#licenseagreement)
 + [Use Case](#usecase)
@@ -28,18 +28,18 @@ Please review the terms of the license before downloading and using this templat
 # Use Case <a name="usecase"/>
 As a Workday admin I want to migrate workers to ServiceNow.
 
-This Anypoint Template should serve as a foundation for the process of migrating Worker from Workday instance to Service Now, being able to specify filtering criteria and desired behavior when a user already exists in the destination system. 
+This Anypoint Template should serve as a foundation for the process of migrating Workers from Workday instance to ServiceNow, being able to specify filtering criteria and desired behavior if a worker already exists in the destination system. 
 
 As implemented, this Anypoint Template leverages the [Batch Module](http://www.mulesoft.org/documentation/display/current/Batch+Processing).
-The batch job is divided in Input, Process and On Complete stages.
-During the Input stage the Anypoint Template will go to the Workday and query all the existing active workers that match the filter criteria. The criteria is based on manipulations starting from the given date.
-The last step of the Process stage will group the workers and create them in Service Now.
-Finally during the On Complete stage the Anypoint Template will both output statistics data into the console and send a notification email with the results of the batch execution.
+The batch job is divided into Input, Process and On Complete stages.
+During the Input stage the Anypoint Template will query Workday for all the existing active workers that match the filter criteria. The criteria is based on manipulations starting from the given date.
+The last step of the Process stage will group the workers and create them in ServiceNow.
+Finally during the On Complete stage the Anypoint Template will both output statistics data into the console and send a notification e-mail with the results of the batch execution.
 
 # Considerations <a name="considerations"/>
 
 There are a couple of things you should take into account before running this Anypoint Template:
-1. **Workday email uniqueness**: The email can be repeated for two or more accounts (or missing). Therefore Workday accounts with duplicate emails will be removed from processing in the Input stage.
+1. **Workday e-mail uniqueness**: The e-mail can be repeated for two or more accounts (or missing). Therefore Workday accounts with duplicate emails will be removed from processing in the Input stage.
 
 
 
@@ -60,9 +60,13 @@ There are no particular considerations for this Anypoint Template regarding Serv
 There are no particular considerations for this Anypoint Template regarding Workday as data origin.
 
 
+
+
+
+
 # Run it! <a name="runit"/>
-Simple steps to get Workday ServiceNow Worker Migration running.
-In any of the ways you would like to run this Anypoint Template this is an example of the output you'll see after hitting the HTTP endpoint:
+Simple steps to get Workday to ServiceNow Worker Migration running.
+In any of the ways you would like to run this Anypoint Template this is an example of the output you'll see after hitting the HTTP connector:
 
 <pre>
 <h1>Batch Process initiated</h1>
@@ -105,11 +109,11 @@ Once you have imported you Anypoint Template into Anypoint Studio you need to fo
 
 ### Running on Mule ESB stand alone <a name="runonmuleesbstandalone"/>
 Complete all properties in one of the property files, for example in [mule.prod.properties] (../master/src/main/resources/mule.prod.properties) and run your app with the corresponding environment variable to use it. To follow the example, this will be `mule.env=prod`. 
-After this, to trigger the use case you just need to hit the local http endpoint with the port you configured in your file. If this is, for instance, `9090` then you should hit: `http://localhost:9090/migrateworkers` and this will output a summary report and send it in the mail.
+After this, to trigger the use case you just need to hit the local HTTP connector with the port you configured in your file. If this is, for instance, `9090` then you should hit: `http://localhost:9090/migrateworkers` and this will output a summary report and send it in the e-mail.
 
 ## Running on CloudHub <a name="runoncloudhub"/>
 While [creating your application on CloudHub](http://www.mulesoft.org/documentation/display/current/Hello+World+on+CloudHub) (Or you can do it later as a next step), you need to go to Deployment > Advanced to set all environment variables detailed in **Properties to be configured** as well as the **mule.env**.
-Once your app is all set and started, supposing you choose as domain name `wdayworkermigration` to trigger the use case you just need to hit `http://wdayworkermigration.cloudhub.io/migrateworkers` and report will be sent to the email configured.
+Once your app is all set up and started, supposing you choose `wdayworkermigration` as domain name to trigger the use case, you just need to hit `http://wdayworkermigration.cloudhub.io/migrateworkers` and report will be sent to the e-mail configured.
 
 ### Deploying your Anypoint Template on CloudHub <a name="deployingyouranypointtemplateoncloudhub"/>
 Mule Studio provides you with really easy way to deploy your Template directly to CloudHub, for the specific steps to do so please check this [link](http://www.mulesoft.org/documentation/display/current/Deploying+Mule+Applications#DeployingMuleApplications-DeploytoCloudHub)
@@ -132,7 +136,7 @@ In order to use this Mule Anypoint Template you need to configure properties (Cr
 + snow.password `ExamplePassword881`
 + snow.endpoint `https://instance.service-now.com`
 
-#### SMPT Services configuration
+#### SMTP Services configuration
 + smtp.host `smtp.gmail.com`
 + smtp.port `587`
 + smtp.user `sender%40gmail.com`
@@ -174,14 +178,13 @@ This flow has Exception Strategy that basically consists on invoking the *defaul
 
 
 ## endpoints.xml<a name="endpointsxml"/>
-This is the file where you will found the inbound and outbound sides of your integration app.
-This Anypoint Template has only an [HTTP Inbound Endpoint](http://www.mulesoft.org/documentation/display/current/HTTP+Endpoint+Reference) as the way to trigger the use case.
+This is the file where you will find the inbound and outbound sides of your integration app.
+This Anypoint Template has only an [HTTP Connector](http://www.mulesoft.org/documentation/display/current/HTTP+Connector) as the way to trigger the use case.
 
-**HTTP Inbound Endpoint** - Start Report Generation
+**HTTP Connector** - start Workers synchronization
 + `${http.port}` is set as a property to be defined either on a property file or in CloudHub environment variables.
-+ The path configured by default is `migrateworkers` and you are free to change for the one you prefer.
++ The path configured by default is `migrateworkers` and you can change it for the one you prefer.
 + The host name for all endpoints in your CloudHub configuration should be defined as `localhost`. CloudHub will then route requests from your application domain URL to the endpoint.
-+ The endpoint is configured as a *request-response* since as a result of calling it the response will be the total of Workers migrated and filtered by the criteria specified.
 
 
 
