@@ -124,7 +124,6 @@ In order to use this Mule Anypoint Template you need to configure properties (Cr
 ### Application configuration
 + http.port `9090`
 + migration.startDate `"2014-09-12T00:00:00.000+0200"`
-+ utc.offset `2`
 
 #### Workday Connector configuration
 + wday.user `admin@workday`

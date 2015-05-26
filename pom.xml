@@ -22,7 +22,7 @@
 				<configuration>
 					<copyToAppsDirectory>true</copyToAppsDirectory>
 					<inclusions>
-					<inclusion>
+						<inclusion>
                             <groupId>org.mule.modules</groupId>
                             <artifactId>mule-module-servicenow</artifactId>
                         </inclusion>
