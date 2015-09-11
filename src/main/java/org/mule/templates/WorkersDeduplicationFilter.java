@@ -25,7 +25,7 @@ import com.workday.hr.WorkerType;
 */
 public class WorkersDeduplicationFilter implements Filter {
 	
-	Logger log = LogManager.getLogger(WorkersDeduplicationFilter.class);
+	private static final Logger LOGGER = LogManager.getLogger(WorkersDeduplicationFilter.class);
 	
 	@SuppressWarnings("unchecked")
 	@Override
@@ -36,7 +36,7 @@ public class WorkersDeduplicationFilter implements Filter {
 		List<WorkerType> payload = (List<WorkerType>) message.getPayload();
 		List<String> emails = new ArrayList<String>();
 		Iterator<WorkerType> iterator = payload.iterator();
-		log.info("total records:" + payload.size());
+		LOGGER.info("total records:" + payload.size());
 		
 		while (iterator.hasNext()) {
 			WorkerType next = iterator.next();
@@ -68,8 +68,8 @@ public class WorkersDeduplicationFilter implements Filter {
 			}
 		}
 		
-		log.info("unique emails:" + emails.size());
-		log.info("employed workers:" + payload.size());
+		LOGGER.info("unique emails:" + emails.size());
+		LOGGER.info("employed workers:" + payload.size());
 		return true;
 	}
 }
