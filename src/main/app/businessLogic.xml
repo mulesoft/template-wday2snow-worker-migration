@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:servicenow="http://www.mulesoft.org/schema/mule/servicenow" 
-xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting" 
-xmlns:data-mapper="http://www.mulesoft.org/schema/mule/ee/data-mapper" 
+<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw"
+xmlns:servicenow="http://www.mulesoft.org/schema/mule/servicenow" 
+xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
 xmlns:wd-hr="http://www.mulesoft.org/schema/mule/wd-hr" 
 xmlns:smtp="http://www.mulesoft.org/schema/mule/smtp" 
 xmlns:json="http://www.mulesoft.org/schema/mule/json" 
@@ -11,7 +11,7 @@ xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
 xmlns="http://www.mulesoft.org/schema/mule/core" 
 xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
 xmlns:spring="http://www.springframework.org/schema/beans" 
-version="EE-3.6.2" 
+ 
 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
 xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
@@ -20,72 +20,145 @@ http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/m
 http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
 http://www.mulesoft.org/schema/mule/smtp http://www.mulesoft.org/schema/mule/smtp/current/mule-smtp.xsd
 http://www.mulesoft.org/schema/mule/wd-hr http://www.mulesoft.org/schema/mule/wd-hr/current/mule-wd-hr.xsd
-http://www.mulesoft.org/schema/mule/ee/data-mapper http://www.mulesoft.org/schema/mule/ee/data-mapper/current/mule-data-mapper.xsd
 http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
-http://www.mulesoft.org/schema/mule/servicenow http://www.mulesoft.org/schema/mule/servicenow/current/mule-servicenow.xsd">
-    <data-mapper:config name="List_WorkerType__To_Map" transformationGraphPath="list_workertype__to_map.grf" doc:name="List_WorkerType__To_Map"/>
+http://www.mulesoft.org/schema/mule/servicenow http://www.mulesoft.org/schema/mule/servicenow/current/mule-servicenow.xsd
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd" version="EE-3.7.1">
     
     <batch:job name="migrateUsersBatch" max-failed-records="-1">
         <batch:threading-profile poolExhaustedAction="WAIT"/>
         <batch:input>
-            <wd-hr:get-workers config-ref="Workday_Human_Resource" doc:name="Get Workers from Workday" workersRequest-ref="#[org.mule.templates.WorkersRequest.create(${migration.startDate})]"/>
+            <dw:transform-message doc:name="Create GetWorkers Request">
+                <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+---
+{
+	requestCriteria: {
+		transactionLogCriteriaData: [{
+			transactionDateRangeData: {
+				updatedFrom: p('migration.startDate'),
+				updatedThrough: (now - |PT3S|)
+			}
+		}]
+	},
+	responseGroup: {
+		includeEmploymentInformation: true,
+		includeManagementChainData: true,
+		includeOrganizations: true,
+		includePersonalInformation: true,
+		includeReference: true,
+		includeRoles: true,
+		includeTransactionLogData: true,
+		includeUserAccount: true
+	}
+} as :object {
+	class : "com.workday.hr.GetWorkersRequestType"
+}]]></dw:set-payload>
+            </dw:transform-message>
+            <wd-hr:get-workers config-ref="Workday_Human_Resource" doc:name="Get Workers from Workday" />
 
-            <set-payload value="#[payload.responseData.worker]" doc:name="Extract a list of Workers"/>
+            <set-payload value="#[payload.responseData == null ? null : payload.responseData.worker]" doc:name="Extract a list of Workers"/>
             <custom-filter doc:name="Filter duplicate workers" class="org.mule.templates.WorkersDeduplicationFilter"/>
         </batch:input> 
         <batch:process-records>
 
-            <batch:step name="getUserInSnowStep">
-                <enricher source="#[payload]" target="#[recordVars['userInSnow']]" doc:name="store result in record var 'userInSnow'">
-                    <choice doc:name="Choice">
-                        <when expression="#[payload.workerData.userAccountData == null]">
-                            <servicenow:get-records config-ref="ServiceNow" type="SYS_USER" doc:name="query user in ServiceNow by email and name">
-                                <servicenow:get-records-request>
-                                    <servicenow:get-records-request key="lastName">#[payload.workerData.getPersonalData().getNameData().getPreferredNameData().getNameDetailData().getLastName()]</servicenow:get-records-request>
-                                    <servicenow:get-records-request key="email">#[payload.workerData.getPersonalData().getContactData().getEmailAddressData().get(0).getEmailAddress()]</servicenow:get-records-request>
-                                    <servicenow:get-records-request key="firstName">#[payload.workerData.getPersonalData().getNameData().getPreferredNameData().getNameDetailData().getFirstName()]</servicenow:get-records-request>
-                                </servicenow:get-records-request>
-                            </servicenow:get-records>
-                        </when>
-                        <when expression="#[payload.workerData.userAccountData != null &amp;&amp; payload.workerData.userAccountData.userName != null]">
-                            <servicenow:get-records config-ref="ServiceNow" type="SYS_USER" doc:name="query user in ServiceNow by username">
-                                <servicenow:get-records-request>
-                                    <servicenow:get-records-request key="userName">#[payload.workerData.userAccountData.userName]</servicenow:get-records-request>
-                                </servicenow:get-records-request>
-                            </servicenow:get-records>
-                        </when>
-                        <otherwise>
-                            <set-payload value="#[return null]" doc:name="Set Payload"/>
-                        </otherwise>
-                    </choice>
+            <batch:step name="getUserInSnowStep" accept-expression="payload != null">
+                <enricher source="#[payload == null ? null : payload[0].Id]" target="#[recordVars['snowUserId']]" doc:name="store user Id in record var 'snowUserId'">
+                    <processor-chain doc:name="Processor Chain">
+                        <dw:transform-message doc:name="Create getRecords Request">
+                            <dw:set-payload><![CDATA[%dw 1.0
+%output application/xml
+%namespace ns0 http://www.service-now.com/sys_user
+---
+using (personalData = payload.workerData.personalData)
+{
+	ns0#getRecords: {
+		(ns0#email: personalData.contactData.emailAddressData[0].emailAddress) when (payload.workerData.userAccountData == null or payload.workerData.userAccountData.userName == null),
+		(ns0#"first_name": personalData.nameData.preferredNameData.nameDetailData.firstName) when (payload.workerData.userAccountData == null or payload.workerData.userAccountData.userName == null),
+		(ns0#"last_name": personalData.nameData.preferredNameData.nameDetailData.lastName) when (payload.workerData.userAccountData == null or payload.workerData.userAccountData.userName == null),
+		(ns0#"user_name": payload.workerData.userAccountData.userName) when (payload.workerData.userAccountData != null and payload.workerData.userAccountData.userName != null)
+	}
+}]]></dw:set-payload>
+                        </dw:transform-message>
+                        <servicenow:invoke config-ref="ServiceNow" type="sys_user||getRecords" doc:name="query user in ServiceNow"/>
+                        <dw:transform-message doc:name="Get User ID">
+                            <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+%namespace ns0 http://www.service-now.com/sys_user
+---
+payload.ns0#getRecordsResponse map
+{
+	Id: $.ns0#sys_id
+} when payload.ns0#getRecordsResponse is :object otherwise [{Id: null}]]]></dw:set-payload>
+                        </dw:transform-message>
+
+                    </processor-chain>
+
                 </enricher>
-
- 
-            </batch:step>
-            <batch:step name="mapWorkdayWorkerToSnowMap">
-                <data-mapper:transform config-ref="List_WorkerType__To_Map" doc:name="WorkerType To Map"/>
-
             </batch:step>
 
-            <batch:step name="defineIdInServiceNowStep" filter-expression="#[recordVars['userInSnow'] is NullPayload]">
-                <expression-component doc:name="define Id in Service Now instance"><![CDATA[ payload.put('sysId', recordVars['userInSnow'].getGetRecordsResult().isEmpty() ? null : recordVars['userInSnow'].getGetRecordsResult().get(0).getSysId());]]></expression-component>
+            <batch:step name="createUsersInServiceNowStep" accept-expression="payload != null &amp;&amp; recordVars.snowUserId == null">
+
+                <dw:transform-message doc:name="Create insert Request">
+                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/xml
+%namespace ns0 http://www.service-now.com/sys_user
+---
+using (personalData = payload.workerData.personalData)
+{
+	ns0#insert: {
+		ns0#active: payload.workerData.employmentData.workerStatusData.active,
+		ns0#city: personalData.contactData.addressData[-1].municipality,
+		ns0#country: personalData.contactData.addressData[-1].countryReference.ID[1].value,
+		ns0#email: personalData.contactData.emailAddressData[0].emailAddress,
+		ns0#"first_name": personalData.nameData.preferredNameData.nameDetailData.firstName,
+		ns0#"home_phone": personalData.contactData.phoneData[-1].formattedPhone,
+		ns0#"last_name": personalData.nameData.preferredNameData.nameDetailData.lastName,
+		ns0#"middle_name": personalData.nameData.preferredNameData.nameDetailData.middleName,
+		ns0#state: personalData.contactData.addressData[-1].countryRegionReference[-1].ID[-1].value,
+		ns0#street: personalData.contactData.addressData[-1].addressLineData[-1].value,
+		(ns0#"user_name": payload.workerData.userAccountData.userName) when (payload.workerData.userAccountData != null and payload.workerData.userAccountData.userName != null),
+		ns0#zip: personalData.contactData.addressData[-1].postalCode
+	}
+}]]></dw:set-payload>
+                </dw:transform-message>
+
+                <servicenow:invoke config-ref="ServiceNow" type="sys_user||insert" doc:name="ServiceNow"/>
+
+
 
             </batch:step>
+            <batch:step name="updateUsersInServiceNowStep" accept-expression="payload != null &amp;&amp; recordVars.snowUserId != null">
 
-            <batch:step name="createUsersInServiceNowStep" accept-expression="!(payload instanceof NullPayload) &amp;&amp; payload['sysId'] == null">
- 
-                <logger message="User to create: #[payload]" level="INFO" doc:name="Log user to create"/>
-                <expression-component doc:name="Expression"><![CDATA[payload.remove('username');]]></expression-component>
-                <servicenow:insert config-ref="ServiceNow" type="SYS_USER" doc:name="ServiceNow">
-                    <servicenow:insert-request ref="#[payload]"/>
-                </servicenow:insert>
 
-            </batch:step>
-            <batch:step name="updateUsersInServiceNowStep" accept-expression="!(payload instanceof NullPayload) &amp;&amp; payload['sysId'] != null &amp;&amp; payload['email'] != null">
-                <logger message="User to update: #[payload]" level="INFO" doc:name="Log user to update"/>
-                <servicenow:update config-ref="ServiceNow" type="SYS_USER" doc:name="ServiceNow">
-                    <servicenow:update-request ref="#[payload]"/>
-                </servicenow:update>
+                <dw:transform-message doc:name="Create update Request">
+                    <dw:set-payload><![CDATA[%dw 1.0
+%output application/xml
+%namespace ns0 http://www.service-now.com/sys_user
+---
+using (personalData = payload.workerData.personalData)
+{
+	ns0#update: {
+		ns0#active: payload.workerData.employmentData.workerStatusData.active,
+		ns0#city: personalData.contactData.addressData[-1].municipality,
+		ns0#country: personalData.contactData.addressData[-1].countryReference.ID[1].value,
+		ns0#email: personalData.contactData.emailAddressData[0].emailAddress,
+		ns0#"first_name": personalData.nameData.preferredNameData.nameDetailData.firstName,
+		ns0#"home_phone": personalData.contactData.phoneData[-1].formattedPhone,
+		ns0#"last_name": personalData.nameData.preferredNameData.nameDetailData.lastName,
+		ns0#"middle_name": personalData.nameData.preferredNameData.nameDetailData.middleName,
+		ns0#state: personalData.contactData.addressData[-1].countryRegionReference[-1].ID[-1].value,
+		ns0#street: personalData.contactData.addressData[-1].addressLineData[-1].value,
+		ns0#"sys_id": recordVars.snowUserId,
+		(ns0#"user_name": payload.workerData.userAccountData.userName) when (payload.workerData.userAccountData != null and payload.workerData.userAccountData.userName != null),
+		ns0#zip: personalData.contactData.addressData[-1].postalCode
+	}
+}]]></dw:set-payload>
+                </dw:transform-message>
+
+                <servicenow:invoke config-ref="ServiceNow" type="sys_user||update" doc:name="ServiceNow"/>
+
+
+
             </batch:step>
         </batch:process-records>
          <batch:on-complete>

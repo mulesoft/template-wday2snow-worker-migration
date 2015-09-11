@@ -10,6 +10,7 @@ import java.io.FileInputStream;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 
@@ -26,7 +27,6 @@ import org.mule.api.MuleException;
 import org.mule.processor.chain.SubflowInterceptingChainLifecycleWrapper;
 
 import com.mulesoft.module.batch.BatchTestHelper;
-import com.servicenow.usermanagement.sysuser.GetRecordsResponse;
 
 /**
  * The objective of this class is to validate the correct behavior of the flows
@@ -35,23 +35,26 @@ import com.servicenow.usermanagement.sysuser.GetRecordsResponse;
  */
 public class BusinessLogicIT extends AbstractTemplateTestCase {
 
-	protected static final int TIMEOUT_SEC = 60;
-	private BatchTestHelper helper;
+	private static final Logger LOGGER = LogManager.getLogger(BusinessLogicIT.class);
+	private static final String PATH_TO_TEST_PROPERTIES = "./src/test/resources/mule.test.properties";
+	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
 	private static final String PHONE_NUMBER = "232-2323";
 	private static final String STREET = "999 Main St";
 	private static final String CITY = "San Francisco";
-	private final String EMAIL = "darko.vukovic@mulesoft.com";
-	private String SNOW_ID;
-	private static final String PATH_TO_TEST_PROPERTIES = "./src/test/resources/mule.test.properties";
-	private Map<String, String> user = new HashMap<String, String>();	
+	private static final String EMAIL = "darko.vukovic@mulesoft.com";
+	
+	protected static final int TIMEOUT_SEC = 60;
+	
 	private static String WORKDAY_ID;
-	private static final Logger log = LogManager.getLogger(BusinessLogicIT.class);
+	private String SNOW_ID;
+	private BatchTestHelper helper;
+	private Map<String, String> user = new HashMap<String, String>();
 	
 	@BeforeClass
 	public static void init(){
-		SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+		
 		Calendar cal = Calendar.getInstance();
-		System.setProperty("migration.startDate", "\"" + sdf.format(cal.getTime()) + "\"");
+		System.setProperty("migration.startDate", DATE_FORMAT.format(cal.getTime()));
 	}
 	
 	@Before
@@ -60,7 +63,7 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
     	try {
     		props.load(new FileInputStream(PATH_TO_TEST_PROPERTIES));
     	} catch (Exception e) {
-    		log.error("Error occured while reading mule.test.properties", e);
+    		LOGGER.error("Error occured while reading mule.test.properties", e);
     	} 
     	WORKDAY_ID = props.getProperty("wday.testuser.id");
     	helper = new BatchTestHelper(muleContext);
@@ -84,19 +87,19 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 		flow.initialise();
 		
 		MuleEvent response = flow.process(getTestEvent(EMAIL, MessageExchangePattern.REQUEST_RESPONSE));
-		GetRecordsResponse snowRes = ((GetRecordsResponse)response.getMessage().getPayload());
-		log.info("snow users: " + snowRes.getGetRecordsResult().size());
+		List<Map<String,String>> snowUserList = (List<Map<String,String>>) response.getMessage().getPayload();
+		LOGGER.info("snow users: " + snowUserList.size());
 		
-		Assert.assertTrue("There should be a user in ServiceNow.", snowRes.getGetRecordsResult().size() == 1);
-		Assert.assertEquals("Street should be set", snowRes.getGetRecordsResult().get(0).getStreet(), user.get("Street"));				
+		Assert.assertTrue("There should be a user in ServiceNow.", snowUserList.size() == 1);
+		Assert.assertEquals("Street should be set", snowUserList.get(0).get("Street"), user.get("Street"));				
 		
-		SNOW_ID = snowRes.getGetRecordsResult().get(0).getSysId();
+		SNOW_ID = snowUserList.get(0).get("Id");
 	}
 
 	private void createTestDataInSandBox() throws MuleException, Exception {
 		SubflowInterceptingChainLifecycleWrapper flow = getSubFlow("updateWorkdayEmployee");
 		flow.initialise();
-		log.info("updating a workday employee...");
+		LOGGER.info("updating a workday employee...");
 		try {
 			flow.process(getTestEvent(prepareEdit(), MessageExchangePattern.REQUEST_RESPONSE));						
 		} catch (Exception e) {
@@ -105,7 +108,7 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 	}
 	
 	private void deleteTestDataFromSandBox() throws MuleException, Exception {
-		log.info("deleting test data...");
+		LOGGER.info("deleting test data...");
 		// Delete the created users in Service Now
     	SubflowInterceptingChainLifecycleWrapper flow = getSubFlow("deleteSnowUsers");
 		flow.initialise();		
@@ -117,6 +120,7 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 	private Map<String, String> prepareEdit(){			
 		user.put("Location", "San_Francisco_site");
 		user.put("Phone", PHONE_NUMBER);
+		user.put("Extension", "+1");
 		user.put("Email", EMAIL);
 		user.put("ExtId__c", WORKDAY_ID);
 		user.put("Street", STREET + System.currentTimeMillis());
@@ -124,7 +128,7 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 		user.put("State", "USA-CA");
 		user.put("City", CITY);
 		user.put("PostalCode", "94105");
-		user.put("LastModifiedDate", String.valueOf(System.currentTimeMillis()));
+		user.put("LastModifiedDate", DATE_FORMAT.format(System.currentTimeMillis()));
 		return user;
 	}
 	
