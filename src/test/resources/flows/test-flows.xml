@@ -49,7 +49,7 @@ payload.ns0#getRecordsResponse map
 {
 	Id: $.ns0#sys_id,
 	Street: $.ns0#street
-} when payload.ns0#getRecordsResponse is :object otherwise [{Id: null, Street:null}]]]></dw:set-payload>
+} when payload.ns0#getRecordsResponse is :object otherwise []]]></dw:set-payload>
         </dw:transform-message>
     </sub-flow>
     <sub-flow name="updateWorkdayEmployee" doc:name="updateWorkdayEmployee">
