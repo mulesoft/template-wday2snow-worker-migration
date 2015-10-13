@@ -32,7 +32,7 @@ In any of the ways you would like to run this Anypoint Template this is an examp
 <h1>Batch Process initiated</h1>
 <b>ID:</b>6eea3cc6-7c96-11e3-9a65-55f9f3ae584e<br/>
 <b>Records to Be Processed: </b>9<br/>
-<b>Start execution on: </b>Fri Sep 11 18:05:33 GMT-03:00 2015
+<b>Start execution on: </b>Tue Oct 13 18:05:33 GMT-03:00 2015
 </pre>
 ]]>
 		</section>
@@ -49,7 +49,7 @@ After this, to trigger the use case you just need to hit the local HTTP connecto
 		<section id="application_configuration">
 		<![CDATA[
 + http.port `9090`
-+ migration.startDate `"2015-09-11T00:00:00.000+02:00"`
++ migration.startDate `"2015-09-11T00:00:00.000Z"`
 
 #### Workday Connector configuration
 + wday.user `admin@workday`
