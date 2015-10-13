@@ -5,7 +5,7 @@
 	xmlns:wd-hr="http://www.mulesoft.org/schema/mule/wd-hr"
 	xmlns="http://www.mulesoft.org/schema/mule/core" 
 	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
-	xmlns:spring="http://www.springframework.org/schema/beans" version="EE-3.7.2"
+	xmlns:spring="http://www.springframework.org/schema/beans" 
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
@@ -13,7 +13,7 @@ http://www.mulesoft.org/schema/mule/wd-hr http://www.mulesoft.org/schema/mule/wd
 http://www.mulesoft.org/schema/mule/servicenow http://www.mulesoft.org/schema/mule/servicenow/current/mule-servicenow.xsd
 http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
 
-    <sub-flow name="deleteSnowUsers" doc:name="deleteSnowUsers">
+    <sub-flow name="deleteSnowUsers" >
         <dw:transform-message doc:name="Create deleteRecord Request">
             <dw:set-payload><![CDATA[%dw 1.0
 %output application/xml
@@ -27,7 +27,7 @@ http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee
         </dw:transform-message>
         <servicenow:invoke config-ref="ServiceNow" type="sys_user||deleteRecord" doc:name="delete User"/>
     </sub-flow>
-    <sub-flow name="getSnowUsers" doc:name="getSnowUsers">
+    <sub-flow name="getSnowUsers" >
         <dw:transform-message doc:name="Create getRecords Request">
             <dw:set-payload><![CDATA[%dw 1.0
 %output application/xml
@@ -52,7 +52,7 @@ payload.ns0#getRecordsResponse map
 } when payload.ns0#getRecordsResponse is :object otherwise []]]></dw:set-payload>
         </dw:transform-message>
     </sub-flow>
-    <sub-flow name="updateWorkdayEmployee" doc:name="updateWorkdayEmployee">
+    <sub-flow name="updateWorkdayEmployee" >
         <dw:transform-message doc:name="Create MaintainContactInformationForPersonEvent Request">
             <dw:set-payload><![CDATA[%dw 1.0
 %output application/java

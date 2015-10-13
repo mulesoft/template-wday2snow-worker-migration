@@ -74,7 +74,7 @@ In any of the ways you would like to run this Anypoint Template this is an examp
 <h1>Batch Process initiated</h1>
 <b>ID:</b>6eea3cc6-7c96-11e3-9a65-55f9f3ae584e<br/>
 <b>Records to Be Processed: </b>9<br/>
-<b>Start execution on: </b>Fri Sep 11 18:05:33 GMT-03:00 2015
+<b>Start execution on: </b>Tue Oct 13 18:05:33 GMT-03:00 2015
 </pre>
 
 ## Running on premise <a name="runonopremise"/>
@@ -125,7 +125,7 @@ Mule Studio provides you with really easy way to deploy your Template directly t
 In order to use this Mule Anypoint Template you need to configure properties (Credentials, configurations, etc.) either in properties file or in CloudHub as Environment Variables. Detail list with examples:
 ### Application configuration
 + http.port `9090`
-+ migration.startDate `"2015-09-11T00:00:00.000+02:00"`
++ migration.startDate `"2015-09-11T00:00:00.000Z"`
 
 #### Workday Connector configuration
 + wday.user `admin@workday`

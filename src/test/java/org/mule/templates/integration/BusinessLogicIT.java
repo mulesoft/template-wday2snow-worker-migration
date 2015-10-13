@@ -13,6 +13,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Properties;
+import java.util.TimeZone;
 
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
@@ -24,6 +25,7 @@ import org.junit.Test;
 import org.mule.MessageExchangePattern;
 import org.mule.api.MuleEvent;
 import org.mule.api.MuleException;
+import org.mule.api.lifecycle.InitialisationException;
 import org.mule.processor.chain.SubflowInterceptingChainLifecycleWrapper;
 
 import com.mulesoft.module.batch.BatchTestHelper;
@@ -37,7 +39,7 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 
 	private static final Logger LOGGER = LogManager.getLogger(BusinessLogicIT.class);
 	private static final String PATH_TO_TEST_PROPERTIES = "./src/test/resources/mule.test.properties";
-	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
+	private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'");
 	private static final String PHONE_NUMBER = "232-2323";
 	private static final String STREET = "999 Main St";
 	private static final String CITY = "San Francisco";
@@ -50,10 +52,16 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 	private BatchTestHelper helper;
 	private Map<String, String> user = new HashMap<String, String>();
 	
+	private SubflowInterceptingChainLifecycleWrapper getSnowUsersSubflow;
+	private SubflowInterceptingChainLifecycleWrapper updateWorkdayEmployeeSubflow;
+	private SubflowInterceptingChainLifecycleWrapper deleteSnowUsersSubflow;
+	
+	
 	@BeforeClass
 	public static void init(){
 		
 		Calendar cal = Calendar.getInstance();
+		DATE_FORMAT.setTimeZone(TimeZone.getTimeZone("UTC"));
 		System.setProperty("migration.startDate", DATE_FORMAT.format(cal.getTime()));
 	}
 	
@@ -67,7 +75,19 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
     	} 
     	WORKDAY_ID = props.getProperty("wday.testuser.id");
     	helper = new BatchTestHelper(muleContext);
+    	initializeSubflows();
 		createTestDataInSandBox();
+	}
+
+	private void initializeSubflows() throws InitialisationException {
+		getSnowUsersSubflow = getSubFlow("getSnowUsers");
+		getSnowUsersSubflow.initialise();
+		
+		updateWorkdayEmployeeSubflow = getSubFlow("updateWorkdayEmployee");
+		updateWorkdayEmployeeSubflow.initialise();
+		
+		deleteSnowUsersSubflow = getSubFlow("deleteSnowUsers");
+		deleteSnowUsersSubflow.initialise();
 	}
 
 	@After
@@ -83,10 +103,7 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 		helper.awaitJobTermination(TIMEOUT_SEC * 1000, 500);
 		helper.assertJobWasSuccessful();
 
-		SubflowInterceptingChainLifecycleWrapper flow = getSubFlow("getSnowUsers");
-		flow.initialise();
-		
-		MuleEvent response = flow.process(getTestEvent(EMAIL, MessageExchangePattern.REQUEST_RESPONSE));
+		MuleEvent response = getSnowUsersSubflow.process(getTestEvent(EMAIL, MessageExchangePattern.REQUEST_RESPONSE));
 		List<Map<String,String>> snowUserList = (List<Map<String,String>>) response.getMessage().getPayload();
 		LOGGER.info("snow users: " + snowUserList.size());
 		
@@ -97,11 +114,9 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 	}
 
 	private void createTestDataInSandBox() throws MuleException, Exception {
-		SubflowInterceptingChainLifecycleWrapper flow = getSubFlow("updateWorkdayEmployee");
-		flow.initialise();
 		LOGGER.info("updating a workday employee...");
 		try {
-			flow.process(getTestEvent(prepareEdit(), MessageExchangePattern.REQUEST_RESPONSE));						
+			updateWorkdayEmployeeSubflow.process(getTestEvent(prepareEdit(), MessageExchangePattern.REQUEST_RESPONSE));						
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -110,9 +125,7 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 	private void deleteTestDataFromSandBox() throws MuleException, Exception {
 		LOGGER.info("deleting test data...");
 		// Delete the created users in Service Now
-    	SubflowInterceptingChainLifecycleWrapper flow = getSubFlow("deleteSnowUsers");
-		flow.initialise();		
-		flow.process(getTestEvent(SNOW_ID));				
+		deleteSnowUsersSubflow.process(getTestEvent(SNOW_ID));				
 		
 		// Workday test data do not need to be deleted, will be reused next time
 	}
