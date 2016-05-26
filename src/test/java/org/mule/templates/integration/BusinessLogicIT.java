@@ -25,8 +25,6 @@ import org.junit.Test;
 import org.mule.MessageExchangePattern;
 import org.mule.api.MuleEvent;
 import org.mule.api.MuleException;
-import org.mule.api.lifecycle.InitialisationException;
-import org.mule.processor.chain.SubflowInterceptingChainLifecycleWrapper;
 
 import com.mulesoft.module.batch.BatchTestHelper;
 
@@ -43,7 +41,7 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 	private static final String PHONE_NUMBER = "232-2323";
 	private static final String STREET = "999 Main St";
 	private static final String CITY = "San Francisco";
-	private static final String EMAIL = "darko.vukovic@mulesoft.com";
+	private static final String EMAIL = "darko.vukovic" + System.currentTimeMillis() + "@mulesoft.com";
 	
 	protected static final int TIMEOUT_SEC = 60;
 	
@@ -51,10 +49,6 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 	private String SNOW_ID;
 	private BatchTestHelper helper;
 	private Map<String, String> user = new HashMap<String, String>();
-	
-	private SubflowInterceptingChainLifecycleWrapper getSnowUsersSubflow;
-	private SubflowInterceptingChainLifecycleWrapper updateWorkdayEmployeeSubflow;
-	private SubflowInterceptingChainLifecycleWrapper deleteSnowUsersSubflow;
 	
 	
 	@BeforeClass
@@ -75,19 +69,7 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
     	} 
     	WORKDAY_ID = props.getProperty("wday.testuser.id");
     	helper = new BatchTestHelper(muleContext);
-    	initializeSubflows();
 		createTestDataInSandBox();
-	}
-
-	private void initializeSubflows() throws InitialisationException {
-		getSnowUsersSubflow = getSubFlow("getSnowUsers");
-		getSnowUsersSubflow.initialise();
-		
-		updateWorkdayEmployeeSubflow = getSubFlow("updateWorkdayEmployee");
-		updateWorkdayEmployeeSubflow.initialise();
-		
-		deleteSnowUsersSubflow = getSubFlow("deleteSnowUsers");
-		deleteSnowUsersSubflow.initialise();
 	}
 
 	@After
@@ -103,12 +85,13 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 		helper.awaitJobTermination(TIMEOUT_SEC * 1000, 500);
 		helper.assertJobWasSuccessful();
 
-		MuleEvent response = getSnowUsersSubflow.process(getTestEvent(EMAIL, MessageExchangePattern.REQUEST_RESPONSE));
+		MuleEvent response = runFlow("getSnowUsers", getTestEvent(EMAIL, MessageExchangePattern.REQUEST_RESPONSE));
 		List<Map<String,String>> snowUserList = (List<Map<String,String>>) response.getMessage().getPayload();
 		LOGGER.info("snow users: " + snowUserList.size());
 		
 		Assert.assertTrue("There should be a user in ServiceNow.", snowUserList.size() == 1);
-		Assert.assertEquals("Street should be set", snowUserList.get(0).get("Street"), user.get("Street"));				
+		Assert.assertEquals("Street should be set", snowUserList.get(0).get("Street"), user.get("Street"));
+		Assert.assertEquals("Email should be set", snowUserList.get(0).get("Email"), user.get("Email"));
 		
 		SNOW_ID = snowUserList.get(0).get("Id");
 	}
@@ -116,7 +99,7 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 	private void createTestDataInSandBox() throws MuleException, Exception {
 		LOGGER.info("updating a workday employee...");
 		try {
-			updateWorkdayEmployeeSubflow.process(getTestEvent(prepareEdit(), MessageExchangePattern.REQUEST_RESPONSE));						
+			runFlow("updateWorkdayEmployee", getTestEvent(prepareEdit(), MessageExchangePattern.REQUEST_RESPONSE));						
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
@@ -125,7 +108,7 @@ public class BusinessLogicIT extends AbstractTemplateTestCase {
 	private void deleteTestDataFromSandBox() throws MuleException, Exception {
 		LOGGER.info("deleting test data...");
 		// Delete the created users in Service Now
-		deleteSnowUsersSubflow.process(getTestEvent(SNOW_ID));				
+		runFlow("deleteSnowUsers", getTestEvent(SNOW_ID));				
 		
 		// Workday test data do not need to be deleted, will be reused next time
 	}

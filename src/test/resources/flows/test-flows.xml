@@ -1,19 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw"
+<mule xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" xmlns:wd-connector="http://www.mulesoft.org/schema/mule/wd-connector"
+	xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw"
 	xmlns:servicenow="http://www.mulesoft.org/schema/mule/servicenow" 
-	xmlns:wd-hr="http://www.mulesoft.org/schema/mule/wd-hr"
 	xmlns="http://www.mulesoft.org/schema/mule/core" 
 	xmlns:doc="http://www.mulesoft.org/schema/mule/documentation"
 	xmlns:spring="http://www.springframework.org/schema/beans" 
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-	xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+	xsi:schemaLocation="http://www.mulesoft.org/schema/mule/wd-connector http://www.mulesoft.org/schema/mule/wd-connector/current/mule-wd-connector.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
-http://www.mulesoft.org/schema/mule/wd-hr http://www.mulesoft.org/schema/mule/wd-hr/current/mule-wd-hr.xsd
 http://www.mulesoft.org/schema/mule/servicenow http://www.mulesoft.org/schema/mule/servicenow/current/mule-servicenow.xsd
-http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd">
-
-    <sub-flow name="deleteSnowUsers" >
+http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd
+http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd">
+    <flow name="deleteSnowUsers">
         <dw:transform-message doc:name="Create deleteRecord Request">
             <dw:set-payload><![CDATA[%dw 1.0
 %output application/xml
@@ -26,8 +26,8 @@ http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee
 }]]></dw:set-payload>
         </dw:transform-message>
         <servicenow:invoke config-ref="ServiceNow" type="sys_user||deleteRecord" doc:name="delete User"/>
-    </sub-flow>
-    <sub-flow name="getSnowUsers" >
+    </flow>
+    <flow name="getSnowUsers">
         <dw:transform-message doc:name="Create getRecords Request">
             <dw:set-payload><![CDATA[%dw 1.0
 %output application/xml
@@ -48,102 +48,75 @@ http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee
 payload.ns0#getRecordsResponse map
 {
 	Id: $.ns0#sys_id,
-	Street: $.ns0#street
+	Street: $.ns0#street,
+	Email: $.ns0#email
 } when payload.ns0#getRecordsResponse is :object otherwise []]]></dw:set-payload>
         </dw:transform-message>
-    </sub-flow>
-    <sub-flow name="updateWorkdayEmployee" >
+    </flow>
+    <flow name="updateWorkdayEmployee">
         <dw:transform-message doc:name="Create MaintainContactInformationForPersonEvent Request">
+            <dw:input-payload doc:sample="sample_data\map.dwl"/>
             <dw:set-payload><![CDATA[%dw 1.0
-%output application/java
+%output application/xml
+%namespace ns0 urn:com.workday/bsvc
 ---
 {
-	maintainContactInformationData: {
-		effectiveDate: payload.LastModifiedDate,
-		workerContactInformationData: {
-			addressData: [{
-				addressLineData: [{
-					type: "ADDRESS_LINE_1",
-					value: payload.Street
-				}],
-				countryReference: {
-					ID: [{
-						type: "ISO_3166-1_Alpha-3_Code",
-						value: payload.Country
-					}]
-				},
-				countryRegionReference: {
-					ID: [{
-						type: "Country_Region_ID",
-						value: payload.State
-					}]
-				},
-				effectiveDate: payload.LastModifiedDate,
-				municipality: payload.City,
-				postalCode: payload.PostalCode,
-				usageData: [{
-					public: false,
-					typeData: [{
-						primary: true,
-						typeReference: {
-							ID: [{
-								type: "Communication_Usage_Type_ID",
-								value: "HOME"
-							}]
+	ns0#Maintain_Contact_Information_for_Person_Event_Request: {
+		ns0#Maintain_Contact_Information_Data: {
+			ns0#Worker_Reference: {
+				ns0#ID @(ns0#type: "Employee_ID"): payload.ExtId__c
+			},
+			ns0#Effective_Date: payload.LastModifiedDate,
+			ns0#Worker_Contact_Information_Data: {
+				ns0#Address_Data: {
+					ns0#Country_Reference: {
+						ns0#ID @(ns0#type: "ISO_3166-1_Alpha-3_Code"): payload.Country
+					},
+					ns0#Address_Line_Data @(ns0#Type: "ADDRESS_LINE_1"): payload.Street,
+					ns0#Municipality: payload.City,
+					ns0#Country_Region_Reference: {
+						ns0#ID @(ns0#type: "Country_Region_ID"): payload.State
+					},
+					ns0#Postal_Code: payload.PostalCode,
+					ns0#Usage_Data @(ns0#Public: false): {
+						ns0#Type_Data @(ns0#Primary: true): {
+							ns0#Type_Reference: {
+								ns0#ID @(ns0#type: "Communication_Usage_Type_ID"): "HOME"
+							}
 						}
-					}]
-				}]
-			}],
-			emailAddressData: [{
-				emailAddress: payload.Email,
-				usageData: [{
-					public: true,
-					typeData: [{
-						primary: true,
-						typeReference: {
-							ID: [{
-								type: "Communication_Usage_Type_ID",
-								value: "HOME"
-							}]
-						}
-					}]
-				}]
-			}],
-			phoneData: [{
-				countryISOCode: payload.Country,
-				phoneDeviceTypeReference: {
-					ID: [{
-						type: "Phone_Device_Type_ID",
-						value: "1063.5"
-					}]
+					}
 				},
-				phoneExtension: payload.Extension,
-				phoneNumber: payload.Phone,
-				usageData: [{
-					public: true,
-					typeData: [{
-						primary: true,
-						typeReference: {
-							ID: [{
-								type: "Communication_Usage_Type_ID",
-								value: "HOME"
-							}]
+				ns0#Phone_Data: {
+					ns0#Country_ISO_Code: payload.Country,
+					ns0#Phone_Number: payload.Phone,
+					ns0#Phone_Extension: payload.Extension,
+					ns0#Phone_Device_Type_Reference: {
+						ns0#ID @(ns0#type: "Phone_Device_Type_ID"): "1063.5"
+					},
+					ns0#Usage_Data @(ns0#Public: true): {
+						ns0#Type_Data @(ns0#Primary: true): {
+							ns0#Type_Reference: {
+								ns0#ID @(ns0#type: "Communication_Usage_Type_ID"): "HOME"
+							}
 						}
-					}]
-				}]
-			}]
-		},
-		workerReference: {
-			ID: [{
-				type: "Employee_ID",
-				value: payload.ExtId__c
-			}]
+					}
+				},
+				ns0#Email_Address_Data: {
+					ns0#Email_Address: payload.Email,
+					ns0#Usage_Data @(ns0#Public: true): {
+						ns0#Type_Data @(ns0#Primary: true): {
+							ns0#Type_Reference: {
+								ns0#ID @(ns0#type: "Communication_Usage_Type_ID"): "HOME"
+							}
+						}
+					}
+				}
+			}
 		}
 	}
-} as :object {
-	class : "com.workday.hr.MaintainContactInformationForPersonEventRequestType"
 }]]></dw:set-payload>
         </dw:transform-message>
-        <wd-hr:maintain-contact-information config-ref="Workday_Human_Resource" doc:name="Workday Human Resource"/>
-    </sub-flow>
+        <wd-connector:invoke config-ref="Workday__Basic" type="Human_Resources||Maintain_Contact_Information" doc:name="Maintain Contact Information"/>
+    </flow>
+
 </mule>
