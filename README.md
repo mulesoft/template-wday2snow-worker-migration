@@ -128,9 +128,10 @@ In order to use this Mule Anypoint Template you need to configure properties (Cr
 + migration.startDate `"2015-09-11T00:00:00.000Z"`
 
 #### Workday Connector configuration
-+ wday.user `admin@workday`
-+ wday.password `secret`
-+ wday.endpoint `https://impl-cc.workday.com/ccx/service/workday/Human_Resources/v23.1`
++ wday.user `joan`
++ wday.tenant `acme_pt1`
++ wday.password `joanPass123`
++ wdayf.hostname `your_impl-cc.workday.com`
 
 #### ServiceNow Connector 
 + snow.user `snow_user1`

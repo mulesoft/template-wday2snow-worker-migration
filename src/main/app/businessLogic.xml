@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw"
+<mule xmlns:metadata="http://www.mulesoft.org/schema/mule/metadata" xmlns:wd-connector="http://www.mulesoft.org/schema/mule/wd-connector"
+	xmlns:dw="http://www.mulesoft.org/schema/mule/ee/dw"
 xmlns:servicenow="http://www.mulesoft.org/schema/mule/servicenow" 
 xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
-xmlns:wd-hr="http://www.mulesoft.org/schema/mule/wd-hr" 
 xmlns:smtp="http://www.mulesoft.org/schema/mule/smtp" 
 xmlns:json="http://www.mulesoft.org/schema/mule/json" 
 xmlns:tracking="http://www.mulesoft.org/schema/mule/ee/tracking" 
@@ -12,13 +12,13 @@ xmlns="http://www.mulesoft.org/schema/mule/core"
 xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" 
 xmlns:spring="http://www.springframework.org/schema/beans" 
 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
-xsi:schemaLocation="http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
+xsi:schemaLocation="http://www.mulesoft.org/schema/mule/wd-connector http://www.mulesoft.org/schema/mule/wd-connector/current/mule-wd-connector.xsd
+http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans-current.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
 http://www.mulesoft.org/schema/mule/batch http://www.mulesoft.org/schema/mule/batch/current/mule-batch.xsd
 http://www.mulesoft.org/schema/mule/ee/tracking http://www.mulesoft.org/schema/mule/ee/tracking/current/mule-tracking-ee.xsd
 http://www.mulesoft.org/schema/mule/json http://www.mulesoft.org/schema/mule/json/current/mule-json.xsd
 http://www.mulesoft.org/schema/mule/smtp http://www.mulesoft.org/schema/mule/smtp/current/mule-smtp.xsd
-http://www.mulesoft.org/schema/mule/wd-hr http://www.mulesoft.org/schema/mule/wd-hr/current/mule-wd-hr.xsd
 http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd
 http://www.mulesoft.org/schema/mule/servicenow http://www.mulesoft.org/schema/mule/servicenow/current/mule-servicenow.xsd
 http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee/dw/current/dw.xsd" >
@@ -28,33 +28,47 @@ http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee
         <batch:input>
             <dw:transform-message doc:name="Create GetWorkers Request">
                 <dw:set-payload><![CDATA[%dw 1.0
-%output application/java
+%output application/xml
+%namespace ns0 urn:com.workday/bsvc
 ---
 {
-	requestCriteria: {
-		transactionLogCriteriaData: [{
-			transactionDateRangeData: {
-				updatedFrom:     p('migration.startDate') as :datetime {class: "java.util.Calendar"},
-				updatedThrough:  (now - |PT6S|) as :datetime {class: "java.util.Calendar"}
-			}
-		}]
-	},
-	responseGroup: {
-		includeEmploymentInformation  : true,
-		includeManagementChainData    : true,
-		includeOrganizations          : true,
-		includePersonalInformation    : true,
-		includeReference              : true,
-		includeRoles                  : true,
-		includeTransactionLogData     : true,
-		includeUserAccount            : true
+	ns0#Get_Workers_Request: {
+		ns0#Request_Criteria: {
+			ns0#Transaction_Log_Criteria_Data: {
+				ns0#Transaction_Date_Range_Data: {
+					ns0#Updated_From: p('migration.startDate'),
+					ns0#Updated_Through: now - |PT6S|
+				}
+			},
+			ns0#Exclude_Inactive_Workers: true,
+			ns0#Exclude_Employees: false,
+			ns0#Exclude_Contingent_Workers: false
+		},
+		ns0#Response_Group: {
+			ns0#Include_Reference: true,
+			ns0#Include_Personal_Information: true,
+			ns0#Include_Transaction_Log_Data: true,
+			ns0#Include_User_Account: true
+		}
 	}
-} as :object {class : "com.workday.hr.GetWorkersRequestType"}]]></dw:set-payload>
+}]]></dw:set-payload>
             </dw:transform-message>
-            <wd-hr:get-workers config-ref="Workday_Human_Resource" doc:name="Get Workers from Workday" />
-            <set-payload value="#[payload.responseData == null ? null : payload.responseData.worker]" doc:name="Extract a list of Workers"/>
+            <wd-connector:invoke config-ref="Workday__Basic" type="Human_Resources||Get_Workers" doc:name="get Workers from Workday"/>
+            <dw:transform-message doc:name="Extract list of  Workers" metadata:id="9da9a44f-d406-403f-8536-f9014af71ca3">
+                <dw:input-payload doc:sample="sample_data\Get_Workers_Response.xml"/>
+                <dw:set-payload><![CDATA[%dw 1.0
+%output application/java
+%namespace ns0 urn:com.workday/bsvc
+---
+(payload.ns0#Get_Workers_Response.ns0#Response_Data.*ns0#Worker
+filter ($.ns0#Worker_Data.ns0#Personal_Data.ns0#Contact_Data.ns0#Email_Address_Data.ns0#Email_Address != null 
+and $.ns0#Worker_Data.ns0#Personal_Data.ns0#Contact_Data.ns0#Email_Address_Data.ns0#Email_Address != '')
+distinctBy $.ns0#Worker_Data.ns0#Personal_Data.ns0#Contact_Data.ns0#Email_Address_Data.ns0#Email_Address)
+when payload.ns0#Get_Workers_Response.ns0#Response_Data != null otherwise []
+]]></dw:set-payload>
+            </dw:transform-message>
 
-            <custom-filter doc:name="Filter duplicate workers" class="org.mule.templates.WorkersDeduplicationFilter"/>
+
         </batch:input> 
         <batch:process-records>
 
@@ -65,19 +79,21 @@ http://www.mulesoft.org/schema/mule/ee/dw http://www.mulesoft.org/schema/mule/ee
                             <dw:set-payload><![CDATA[%dw 1.0
 %output application/xml
 %namespace ns0 http://www.service-now.com/sys_user
+%var userAccountData = payload.Worker_Data.User_Account_Data
 ---
-using (personalData = payload.workerData.personalData)
+using (personalData = payload.Worker_Data.Personal_Data)
 {
 	ns0#getRecords: {
-		(ns0#email: personalData.contactData.emailAddressData[0].emailAddress) when (payload.workerData.userAccountData == null or payload.workerData.userAccountData.userName == null),
-		(ns0#"first_name": personalData.nameData.preferredNameData.nameDetailData.firstName) when (payload.workerData.userAccountData == null or payload.workerData.userAccountData.userName == null),
-		(ns0#"last_name": personalData.nameData.preferredNameData.nameDetailData.lastName) when (payload.workerData.userAccountData == null or payload.workerData.userAccountData.userName == null),
-		(ns0#"user_name": payload.workerData.userAccountData.userName) when (payload.workerData.userAccountData != null and payload.workerData.userAccountData.userName != null)
+		(ns0#email: personalData.Contact_Data.Email_Address_Data.Email_Address) when (userAccountData == null or userAccountData.User_Name == null),
+		(ns0#"first_name": personalData.Name_Data.Preferred_Name_Data.Name_Detail_Data.First_Name) when (userAccountData == null or userAccountData.User_Name == null),
+		(ns0#"last_name": personalData.Name_Data.Preferred_Name_Data.Name_Detail_Data.Last_Name) when (userAccountData == null or userAccountData.User_Name == null),
+		(ns0#"user_name": userAccountData.User_Name) when (userAccountData != null and userAccountData.User_Name != null)
 	}
 }]]></dw:set-payload>
                         </dw:transform-message>
                         <servicenow:invoke config-ref="ServiceNow" type="sys_user||getRecords" doc:name="query user in ServiceNow"/>
-                        <dw:transform-message doc:name="Get User ID">
+                        <dw:transform-message doc:name="Get User ID" metadata:id="849d3f67-4407-487f-8900-2dd39b7b262d">
+                            <dw:input-payload doc:sample="sample_data\getRecordsResponse.xml"/>
                             <dw:set-payload><![CDATA[%dw 1.0
 %output application/java
 %namespace ns0 http://www.service-now.com/sys_user
@@ -94,26 +110,26 @@ payload.ns0#getRecordsResponse map
             </batch:step>
 
             <batch:step name="createUsersInServiceNowStep" accept-expression="payload != null &amp;&amp; recordVars.snowUserId == null">
-                <dw:transform-message doc:name="Create insert Request">
+                <dw:transform-message doc:name="Create insert Request" metadata:id="8571f060-e590-4768-b6b7-8d6c4336d6bb">
                     <dw:set-payload><![CDATA[%dw 1.0
 %output application/xml
 %namespace ns0 http://www.service-now.com/sys_user
 ---
-using (personalData = payload.workerData.personalData)
+using (personalData = payload.Worker_Data.Personal_Data)
 {
 	ns0#insert: {
-		ns0#active        : payload.workerData.employmentData.workerStatusData.active,
-		ns0#city          : personalData.contactData.addressData[-1].municipality,
-		ns0#country       : personalData.contactData.addressData[-1].countryReference.ID[1].value,
-		ns0#email         : personalData.contactData.emailAddressData[0].emailAddress,
-		ns0#"first_name"  : personalData.nameData.preferredNameData.nameDetailData.firstName,
-		ns0#"home_phone"  : personalData.contactData.phoneData[-1].formattedPhone,
-		ns0#"last_name"   : personalData.nameData.preferredNameData.nameDetailData.lastName,
-		ns0#"middle_name" : personalData.nameData.preferredNameData.nameDetailData.middleName,
-		ns0#state         : personalData.contactData.addressData[-1].countryRegionReference.ID[-1].value,
-		ns0#street        : personalData.contactData.addressData[-1].addressLineData[-1].value,
-		(ns0#"user_name"  : payload.workerData.userAccountData.userName) when (payload.workerData.userAccountData != null and payload.workerData.userAccountData.userName != null),
-		ns0#"zip"         : personalData.contactData.addressData[-1].postalCode
+		ns0#active        : payload.Worker_Data.Employment_Data.Worker_Status_Data.Active,
+		ns0#city          : personalData.Contact_Data.Address_Data.Municipality,
+		ns0#country       : personalData.Contact_Data.Address_Data.Country_Reference.ID,
+		ns0#email         : personalData.Contact_Data.Email_Address_Data.Email_Address,
+		ns0#"first_name"  : personalData.Name_Data.Preferred_Name_Data.Name_Detail_Data.First_Name,
+		ns0#"home_phone"  : personalData.Contact_Data.Phone_Data.Formatted_Phone,
+		ns0#"last_name"   : personalData.Name_Data.Preferred_Name_Data.Name_Detail_Data.Last_Name,
+		ns0#"middle_name" : personalData.Name_Data.Preferred_Name_Data.Name_Detail_Data.Middle_Name,
+		ns0#state         : personalData.Contact_Data.Address_Data.countryRegionReference.ID,
+		ns0#street        : personalData.Contact_Data.Address_Data.Address_Line_Data,
+		(ns0#"user_name"  : payload.Worker_Data.User_Account_Data.User_Name) when (payload.Worker_Data.User_Account_Data != null and payload.Worker_Data.User_Account_Data.User_Name != null),
+		ns0#"zip"         : personalData.Contact_Data.Address_Data.Postal_Code
 	}
 }]]></dw:set-payload>
                 </dw:transform-message>
@@ -127,7 +143,7 @@ using (personalData = payload.workerData.personalData)
             <batch:step name="updateUsersInServiceNowStep" accept-expression="payload != null &amp;&amp; recordVars.snowUserId != null">
 
 
-                <dw:transform-message doc:name="Create update Request">
+                <dw:transform-message doc:name="Create update Request" metadata:id="5f11de60-7bc2-4b10-beb2-355146b4915d">
                     <dw:set-payload><![CDATA[%dw 1.0
 %output application/xml
 %namespace ns0 http://www.service-now.com/sys_user
@@ -135,19 +151,19 @@ using (personalData = payload.workerData.personalData)
 using (personalData = payload.workerData.personalData)
 {
 	ns0#update: {
-		ns0#active       : payload.workerData.employmentData.workerStatusData.active,
-		ns0#city         : personalData.contactData.addressData[-1].municipality,
-		ns0#country      : personalData.contactData.addressData[-1].countryReference.ID[1].value,
-		ns0#email        : personalData.contactData.emailAddressData[0].emailAddress,
-		ns0#"first_name" : personalData.nameData.preferredNameData.nameDetailData.firstName,
-		ns0#"home_phone" : personalData.contactData.phoneData[-1].formattedPhone,
-		ns0#"last_name"  : personalData.nameData.preferredNameData.nameDetailData.lastName,
-		ns0#"middle_name": personalData.nameData.preferredNameData.nameDetailData.middleName,
-		ns0#state        : personalData.contactData.addressData[-1].countryRegionReference.ID[-1].value,
-		ns0#street       : personalData.contactData.addressData[-1].addressLineData[-1].value,
-		ns0#"sys_id"     : recordVars.snowUserId,
-		(ns0#"user_name" : payload.workerData.userAccountData.userName) when (payload.workerData.userAccountData != null and payload.workerData.userAccountData.userName != null),
-		ns0#"zip"        : personalData.contactData.addressData[-1].postalCode
+		ns0#active        : payload.Worker_Data.Employment_Data.Worker_Status_Data.Active,
+		ns0#city          : personalData.Contact_Data.Address_Data.Municipality,
+		ns0#country       : personalData.Contact_Data.Address_Data.Country_Reference.ID,
+		ns0#email         : personalData.Contact_Data.Email_Address_Data.Email_Address,
+		ns0#"first_name"  : personalData.Name_Data.Preferred_Name_Data.Name_Detail_Data.First_Name,
+		ns0#"home_phone"  : personalData.Contact_Data.Phone_Data.Formatted_Phone,
+		ns0#"last_name"   : personalData.Name_Data.Preferred_Name_Data.Name_Detail_Data.Last_Name,
+		ns0#"middle_name" : personalData.Name_Data.Preferred_Name_Data.Name_Detail_Data.Middle_Name,
+		ns0#state         : personalData.Contact_Data.Address_Data.countryRegionReference.ID,
+		ns0#street        : personalData.Contact_Data.Address_Data.Address_Line_Data,
+		ns0#"sys_id"      : recordVars.snowUserId,
+		(ns0#"user_name"  : payload.Worker_Data.User_Account_Data.User_Name) when (payload.Worker_Data.User_Account_Data != null and payload.Worker_Data.User_Account_Data.User_Name != null),
+		ns0#"zip"         : personalData.Contact_Data.Address_Data.Postal_Code
 	}
 }]]></dw:set-payload>
                 </dw:transform-message>
