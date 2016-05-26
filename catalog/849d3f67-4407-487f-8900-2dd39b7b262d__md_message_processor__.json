@@ -1,0 +1,11 @@
+{
+    "inputMessageMetadata": {},
+    "outputMessageMetadata": {
+        "messagePayload": {
+            "connectorName": "#_custom_mule_metadata_type_#",
+            "typeId": "serviceNowIds"
+        }
+    },
+    "id": "849d3f67-4407-487f-8900-2dd39b7b262d",
+    "version": "5.2.0.0"
+}
