@@ -6,12 +6,12 @@
 	<parent>
 		<groupId>org.mule.templates</groupId>
 		<artifactId>templates-tooling-parent-pom</artifactId>
-		<version>1.2.3</version>
+		<version>1.3.1</version>
 	</parent>
 
 	<artifactId>template-wday2snow-worker-migration</artifactId>
 	<packaging>mule</packaging>
-	<version>1.2.3-SNAPSHOT</version>
+	<version>1.3.0-SNAPSHOT</version>
 	<name>template-wday2snow-worker-migration Anypoint Template Project</name>
 
 	<build>
@@ -28,7 +28,7 @@
 						</inclusion>
 						<inclusion>
 							<groupId>org.mule.modules</groupId>
-							<artifactId>mule-module-workday-humanresources</artifactId>
+							<artifactId>workday-connector</artifactId>
 						</inclusion>
 					</inclusions>
 				</configuration>
@@ -44,14 +44,8 @@
 		</dependency>
 		<dependency>
 			<groupId>org.mule.modules</groupId>
-			<artifactId>mule-module-workday-humanresources</artifactId>
-			<version>${wday.hr.version}</version>
-		</dependency>
-		<dependency>
-			<groupId>org.mule.modules</groupId>
-			<artifactId>mule-module-spring-config</artifactId>
-			<version>${mule.version}</version>
-			<scope>provided</scope>
+			<artifactId>workday-connector</artifactId>
+			<version>${wday.version}</version>
 		</dependency>
 		<dependency>
 			<groupId>org.mule.modules</groupId>
@@ -71,7 +65,7 @@
 			<version>${mule.version}</version>
 			<scope>test</scope>
 		</dependency>
-	</dependencies>
+    </dependencies>
 
 	<repositories>
 		<repository>

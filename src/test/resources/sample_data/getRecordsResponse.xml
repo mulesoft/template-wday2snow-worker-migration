@@ -1,0 +1,6 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<ns0:getRecordsResponse xmlns:ns0="http://www.service-now.com/sys_user">
+  <ns0:getRecordsResult>
+    <ns0:sys_id>12d5s1aasa5s123</ns0:sys_id>
+  </ns0:getRecordsResult>
+</ns0:getRecordsResponse>
