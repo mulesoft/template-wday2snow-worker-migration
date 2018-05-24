@@ -11,7 +11,7 @@ This Anypoint Template should serve as a foundation for the process of migrating
 
 As implemented, this Anypoint Template leverages the [Batch Module](http://www.mulesoft.org/documentation/display/current/Batch+Processing).
 The batch job is divided into Process and On Complete stages.
-During the Input stage the Anypoint Template will query Workday for all the existing active workers that match the filter criteria. The criteria is based on manipulations starting from the given date.
+The Anypoint Template will query Workday for all the existing active workers that match the filter criteria. The criteria is based on manipulations starting from the given date.
 The last step of the Process stage will create or update the users in ServiceNow based on if a user already exists in the system.
 Finally during the On Complete stage the Anypoint Template will both output statistics data into the console and send a notification e-mail with the results of the batch execution. 
 		</section>
@@ -19,7 +19,7 @@ Finally during the On Complete stage the Anypoint Template will both output stat
 <![CDATA[
 There are a couple of things you should take into account before running this Anypoint Template:
 
-1. **Workday e-mail uniqueness**: The e-mail can be repeated for two or more accounts (or missing). Therefore Workday accounts with duplicate emails will be removed from processing in the Input stage.
+1. **Workday e-mail uniqueness**: The e-mail can be repeated for two or more accounts (or missing). Therefore Workday accounts with duplicate emails will be removed from processing.
 2. Users in ServiceNow are matched with Workday Workers based on the `user_name`. If user_name is not specified then the matching is based on the `email`, `first_name` and `last_name`.
 ]]>
 		</section>
