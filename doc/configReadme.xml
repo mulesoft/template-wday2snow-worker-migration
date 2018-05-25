@@ -1,0 +1,103 @@
+<?xml version="1.0"?>
+<configuration>
+	<placeholders>
+		<placeholder id="template_name">Workday to ServiceNow Worker Migration</placeholder>
+	</placeholders>
+	<sections>
+		<section id="use_case">
+As a Workday admin I want to migrate workers from Workday to users in ServiceNow.
+
+This Anypoint Template should serve as a foundation for the process of migrating Workers from Workday instance to Users in ServiceNow, being able to specify filtering criteria and desired behavior if a user already exists in the destination system. 
+
+As implemented, this Anypoint Template leverages the [Batch Module](http://www.mulesoft.org/documentation/display/current/Batch+Processing).
+The batch job is divided into Process and On Complete stages.
+The Anypoint Template will query Workday for all the existing active workers that match the filter criteria. The criteria is based on manipulations starting from the given date.
+The last step of the Process stage will create or update the users in ServiceNow based on if a user already exists in the system.
+Finally during the On Complete stage the Anypoint Template will both output statistics data into the console and send a notification e-mail with the results of the batch execution. 
+		</section>
+		<section id="considerations">
+<![CDATA[
+There are a couple of things you should take into account before running this Anypoint Template:
+
+1. **Workday e-mail uniqueness**: The e-mail can be repeated for two or more accounts (or missing). Therefore Workday accounts with duplicate emails will be removed from processing.
+2. Users in ServiceNow are matched with Workday Workers based on the `user_name`. If user_name is not specified then the matching is based on the `email`, `first_name` and `last_name`.
+]]>
+		</section>
+		<section id="run_it">
+<![CDATA[
+
+In any of the ways you would like to run this Anypoint Template this is an example of the output you'll see after hiting the HTTP connector:
+
+{
+    "Message": "Batch Process initiated",
+    "ID": "25cb73d0-5e82-11e8-a6fe-100ba905a441",
+    "RecordCount": 2,
+    "StartExecutionOn": "2018-05-23T14:09:30Z"
+}
+]]>
+		</section>
+		<section id="running_on_cloudhub">
+<![CDATA[
+Once your app is all set up and started, supposing you choose `wdayworkermigration` as domain name to trigger the use case, you just need to hit `http://wdayworkermigration.cloudhub.io/migrateworkers` and report will be sent to the e-mail configured.
+]]>
+		</section>
+		<section id="running_on_standalone">
+<![CDATA[
+After this, to trigger the use case you just need to hit the local HTTP connector with the port you configured in your file. If this is, for instance, `9090` then you should hit: `http://localhost:9090/migrateworkers` and this will output a summary report and send it in the e-mail.
+]]>
+		</section>
+		<section id="application_configuration">
+		<![CDATA[
+		
+#### Application Configuration
++ http.port `9090`
++ page.size `100`
++ migration.startDate `"2018-01-01T23:57:59"`
+
+#### Workday Connector configuration
++ wday.username `joan`
++ wday.tenant `acme_pt1`
++ wday.password `joanPass123`
++ wday.hostname `your_impl-cc.workday.com`
+
+#### ServiceNow Connector 
++ snow.user `snow_user1`
++ snow.password `ExamplePassword881`
++ snow.endpoint `https://instance.service-now.com`
+
+#### SMTP Services configuration
++ smtp.host `smtp.gmail.com`
++ smtp.port `587`
++ smtp.user `sender@gmail.com`
++ smtp.password `secret`
+
+#### Mail details
++ mail.from `users.report@mulesoft.com`
++ mail.to `user@mulesoft.com`
++ mail.subject `Users Migration Report`
+]]>
+		</section>	
+		<section id="api_calls">
+			<![CDATA[There are no special considerations regarding API calls.  ]]>
+		</section>	
+		<section id="default_endpoints_xml">
+		<![CDATA[
+This is the file where you will find the inbound and outbound sides of your integration app.
+This Template has only an [HTTP Listener Connector](http://www.mulesoft.org/documentation/display/current/HTTP+Listener+Connector) as the way to trigger the use case.
+
+**HTTP Listener Connector** - Start Report Generation
+
++ `${http.port}` is set as a property to be defined either on a property file or in CloudHub environment variables.
++ The path configured by default is `migrateworkers` and you are free to change for the one you prefer.
++ The host name for all endpoints in your CloudHub configuration should be defined as `localhost`. CloudHub will then route requests from your application domain URL to the endpoint.
++ The endpoint is a *request-response* since as a result of calling it the response will be the total of Workers synced and filtered by the criteria specified.
+]]>
+		</section>
+		<section id="default_business_logic_xml">
+		<![CDATA[
+Functional aspect of the Anypoint Template is implemented on this XML, directed by one flow responsible of executing the logic.
+For the pourpose of this particular Anypoint Template the *mainFlow* just executes the Batch Job which handles all the logic of it.
+]]>
+		</section>
+	</sections>
+</configuration>
