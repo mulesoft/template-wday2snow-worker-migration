@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
-<mule xmlns:sap="http://www.mulesoft.org/schema/mule/sap"
-      xmlns:workday="http://www.mulesoft.org/schema/mule/workday"
+<mule xmlns:workday="http://www.mulesoft.org/schema/mule/workday"
       xmlns:servicenow="http://www.mulesoft.org/schema/mule/servicenow"
       xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
       xmlns:batch="http://www.mulesoft.org/schema/mule/batch"

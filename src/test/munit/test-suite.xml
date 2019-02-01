@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <mule xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
-	xmlns:servicenow="http://www.mulesoft.org/schema/mule/servicenow" xmlns:sap="http://www.mulesoft.org/schema/mule/sap"
+	xmlns:servicenow="http://www.mulesoft.org/schema/mule/servicenow"
 	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xsi:schemaLocation="
 		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
@@ -73,7 +73,7 @@ if (payload.body.getRecordsResponse != null)
 else 0]]></ee:set-variable>
 				</ee:variables>
 			</ee:transform>
-			<set-variable value="#[payload.body.getRecordsResponse.getRecordsResult.sys_id]" doc:name="Set Variable" doc:id="909fd24f-2771-4982-beca-67993b0f304a" variableName="testSysId"/>
+			<set-variable value="#[payload.body.getRecordsResponse.getRecordsResult.sys_id]" doc:name="Store value of testSysId" doc:id="909fd24f-2771-4982-beca-67993b0f304a" variableName="testSysId"/>
 			<flow-ref doc:name="Reference to queryFromServiceNowForUpdate" doc:id="8758c082-b781-4fa2-80ca-cf0e48c775b2" name="queryFromServiceNowForUpdate"/>
 			<set-variable value="#[payload.body.getRecordsResponse.getRecordsResult.active]" doc:name="Store value of record which was updated" doc:id="f7371943-bad8-4777-b304-88f8bb0a53a4" variableName="isActive"/>
 		</munit:execution>
