@@ -1,0 +1,135 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:scripting="http://www.mulesoft.org/schema/mule/scripting"
+	xmlns:servicenow="http://www.mulesoft.org/schema/mule/servicenow"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:munit="http://www.mulesoft.org/schema/mule/munit" xmlns:munit-tools="http://www.mulesoft.org/schema/mule/munit-tools" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xsi:schemaLocation="
+		http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+		http://www.mulesoft.org/schema/mule/munit http://www.mulesoft.org/schema/mule/munit/current/mule-munit.xsd
+		http://www.mulesoft.org/schema/mule/munit-tools  http://www.mulesoft.org/schema/mule/munit-tools/current/mule-munit-tools.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
+http://www.mulesoft.org/schema/mule/servicenow http://www.mulesoft.org/schema/mule/servicenow/current/mule-servicenow.xsd
+http://www.mulesoft.org/schema/mule/scripting http://www.mulesoft.org/schema/mule/scripting/current/mule-scripting.xsd">
+	<munit:config name="test-suite.xml" />
+	<munit:before-test name="test-suiteBefore_Test" description="Before tests actions" doc:id="a644110e-feef-4b27-9e00-5284798d34f8" >
+		<flow-ref doc:name="Reference to queryFromServiceNowForCreate" doc:id="f7af3893-cc0f-430f-8848-839ca05af996" name="queryFromServiceNowForCreate"/>
+		<ee:transform doc:name="Store of quantity of test users" doc:id="08077a4c-b8aa-4f08-a0be-9d8805c05426" >
+			<ee:message >
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="oldQuantityOfTestUsers" ><![CDATA[%dw 2.0
+output application/java
+---
+if (payload.body.getRecordsResponse != null)
+    sizeOf(payload.body.getRecordsResponse)
+else 0]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<flow-ref doc:name="Reference to queryFromServiceNowForUpdate" doc:id="ddc8d753-b9e4-4682-bccb-891458889f2e" name="queryFromServiceNowForUpdate" />
+		<ee:transform doc:name="Create update Request for setting test data" doc:id="59aa2d5d-330a-44e8-bca3-3316c90a2030">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://www.service-now.com/sys_user
+---
+{
+	ns0#update: {
+		ns0#"sys_id"      : payload.body.getRecordsResponse.getRecordsResult.sys_id,
+		ns0#active        : 0
+	}
+}]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+		<servicenow:invoke service="sys_user" operation="update" doc:name="Set test data" doc:id="1354d25f-1b29-46a6-98f9-fe003421eff2" config-ref="ServiceNow_Config" />
+		<munit-tools:mock-when doc:name="Mock email processor to avoid sending email" doc:id="7224dff4-27dd-444d-9acc-f8fcf57a01ba" processor="email:send"/>
+	</munit:before-test>
+	<configuration-properties doc:name="Configuration properties" doc:id="33418e58-9c0a-437b-8717-5bc60e75ba6d" file="mule.test.properties" />
+	<munit:test name="suiteTest" description="MUnit Test" doc:id="c1ad4c9e-725d-4161-a48b-353e59ce90e8">
+		<munit:execution >
+			<flow-ref doc:name="Reference to queryFromWorkdaySubFlow" doc:id="30bea6b5-2a56-4a84-84a4-ca2e92e6335b" name="queryFromWorkdaySubFlow"/>
+			<ee:transform doc:name="Find test users in response from Workday" doc:id="0c31f346-b5b9-4259-9f32-e89dfad8bfe6">
+				<ee:message>
+					<ee:set-payload><![CDATA[%dw 2.0
+output application/java
+---
+payload filter ($.Worker_Data.Personal_Data.Contact_Data.Email_Address_Data.Email_Address == p('wday.testuser.create.email')
+or $.Worker_Data.Personal_Data.Contact_Data.Email_Address_Data.Email_Address == p('wday.testuser.update.email')
+)]]></ee:set-payload>
+				</ee:message>
+			</ee:transform>
+			<flow-ref doc:name="Reference to businessLogicFlow" doc:id="217c19ef-a797-4463-912f-1984089873a4" name="businessLogicFlow"/>
+			<scripting:execute engine="groovy" doc:name="Sleep for 30s until the processing is completed" doc:id="bd63b4ff-92df-4891-bcda-1ce11232435c">
+				<scripting:code>sleep(30000)</scripting:code>
+			</scripting:execute>
+			<flow-ref doc:name="Reference to queryFromServiceNowForCreate" doc:id="cf804309-386b-4fbf-86db-a7bda9f4c9f4" name="queryFromServiceNowForCreate" />
+			<ee:transform doc:name="Store of quantity of test users" doc:id="e2e129f4-b8a0-4f10-9c0f-c414df4d27e2">
+				<ee:message />
+				<ee:variables>
+					<ee:set-variable variableName="newQuantityOfTestUsers"><![CDATA[%dw 2.0
+output application/java
+---
+if (payload.body.getRecordsResponse != null)
+    sizeOf(payload.body.getRecordsResponse)
+else 0]]></ee:set-variable>
+				</ee:variables>
+			</ee:transform>
+			<set-variable value="#[payload.body.getRecordsResponse.getRecordsResult.sys_id]" doc:name="Store value of testSysId" doc:id="909fd24f-2771-4982-beca-67993b0f304a" variableName="testSysId"/>
+			<flow-ref doc:name="Reference to queryFromServiceNowForUpdate" doc:id="8758c082-b781-4fa2-80ca-cf0e48c775b2" name="queryFromServiceNowForUpdate"/>
+			<set-variable value="#[payload.body.getRecordsResponse.getRecordsResult.active]" doc:name="Store value of record which was updated" doc:id="f7371943-bad8-4777-b304-88f8bb0a53a4" variableName="isActive"/>
+		</munit:execution>
+		<munit:validation >
+			<munit-tools:assert-that doc:name="Assert that quantity of test users has been increased" doc:id="ce25618d-4601-4171-8569-431173a1d3fa" expression="#[vars.newQuantityOfTestUsers]" is="#[MunitTools::equalTo(vars.oldQuantityOfTestUsers + 1)]"/>
+			<munit-tools:assert-that doc:name="Assert that test record is active" doc:id="cc4577eb-182a-48fd-9263-2069984a2780" expression="#[vars.isActive]" is='#[MunitTools::equalTo("1")]'/>
+		</munit:validation>
+	</munit:test>
+	<sub-flow name="queryFromServiceNowForUpdate" doc:id="d94cdb64-b1d6-41cb-a69e-f23c558f4458" >
+		<ee:transform doc:name="Create getRecords Request" doc:id="0f967aa9-f8e8-4be6-806b-1a8075973db8" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://www.service-now.com/sys_user
+---
+ns0#getRecords: {
+	(ns0#email: p('wday.testuser.update.email'))
+}
+]]></ee:set-payload>
+			</ee:message>
+			<ee:variables />
+		</ee:transform>
+		<servicenow:invoke service="sys_user" operation="getRecords" doc:name="Query user in ServiceNow" doc:id="6bffbad2-96b9-4237-8f21-77c5b641c9fd" config-ref="ServiceNow_Config" />
+	</sub-flow>
+	<sub-flow name="queryFromServiceNowForCreate" doc:id="838c2634-cb2a-4328-a00d-2761b68ddc10" >
+		<ee:transform doc:name="Create getRecords Request" doc:id="c962868a-3796-4c3b-a506-59727549b510" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://www.service-now.com/sys_user
+---
+ns0#getRecords: {
+	(ns0#email: p('wday.testuser.create.email'))
+}
+]]></ee:set-payload>
+			</ee:message>
+			<ee:variables />
+		</ee:transform>
+		<servicenow:invoke service="sys_user" operation="getRecords" doc:name="Query user in ServiceNow" doc:id="128951b8-1194-473d-8348-41f869d9ef78" config-ref="ServiceNow_Config" />
+	</sub-flow>
+	<munit:after-test name="test-suiteAfter_Test" description="After tests actions" doc:id="e241c891-2571-476d-bfdb-e26e28068a11" >
+		<ee:transform doc:name="Query for delete  record which was inserted" doc:id="1ed5b7d1-057a-4e10-8ada-5788928b60ef" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://www.service-now.com/sys_user
+---
+{
+	ns0#deleteRecord: {
+		ns0#"sys_id" : vars.testSysId
+	}
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables />
+		</ee:transform>
+		<servicenow:invoke service="sys_user" operation="deleteRecord" doc:name="Delete snow record" doc:id="7814b309-5f0d-4305-9042-29914fe48dc1" config-ref="ServiceNow_Config" />
+	</munit:after-test>
+
+</mule>

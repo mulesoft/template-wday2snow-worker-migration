@@ -4,8 +4,7 @@
       xmlns:servicenow="http://www.mulesoft.org/schema/mule/servicenow"
       xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
       xmlns:batch="http://www.mulesoft.org/schema/mule/batch"
-      xmlns:email="http://www.mulesoft.org/schema/mule/email"
-      xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+      xmlns:email="http://www.mulesoft.org/schema/mule/email" xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
 http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd
 http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd
 http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
@@ -14,56 +13,12 @@ http://www.mulesoft.org/schema/mule/servicenow http://www.mulesoft.org/schema/mu
 http://www.mulesoft.org/schema/mule/workday http://www.mulesoft.org/schema/mule/workday/current/mule-workday.xsd">
 
 <flow name="businessLogicFlow" doc:id="884f86c5-66e1-4701-bb9b-594c2a60abf3" >
-   <ee:transform doc:name="Prepare Get Workers request" doc:id="0e2062da-4a79-471a-bbf5-80038e92ce9b">
-            <ee:message>
-                <ee:set-payload><![CDATA[%dw 2.0
-output application/xml
-ns ns0 urn:com.workday/bsvc
----
-{
-    ns0#Get_Workers_Request: {
-        ns0#Request_Criteria: {
-            ns0#Transaction_Log_Criteria_Data: {
-                ns0#Transaction_Date_Range_Data: {
-                    ns0#Updated_From: p('migration.startDate'),
-                    ns0#Updated_Through: (now() - |PT6S|)
-                }
-            },
-            ns0#Exclude_Inactive_Workers: true,
-            ns0#Exclude_Employees: false,
-            ns0#Exclude_Contingent_Workers: false
-        },
-        ns0#Response_Group: {
-            ns0#Include_Reference: true,
-            ns0#Include_Personal_Information: true,
-            ns0#Include_Transaction_Log_Data: true,
-            ns0#Include_User_Account: true
-        }
-    }
-}]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
-        <workday:invoke service="Human_Resources" operation="Get_Workers" doc:name="Get Workers from Workday" doc:id="e0ba44f9-fbaa-4155-b81e-f3c463198536" config-ref="Workday_Config" />
-		<ee:transform doc:name="Filter response" doc:id="29e11f39-d7ad-4e29-b095-3d7ea3d22f09" >
-            <ee:message >
-                <ee:set-payload ><![CDATA[%dw 2.0
-output application/java
-ns ns0 urn:com.workday/bsvc
----
-if (payload.body.ns0#Get_Workers_Response.ns0#Response_Data != null) 
-((payload.body.ns0#Get_Workers_Response.ns0#Response_Data.*ns0#Worker
-filter ($.ns0#Worker_Data.ns0#Personal_Data.ns0#Contact_Data.ns0#Email_Address_Data.ns0#Email_Address != null 
-and $.ns0#Worker_Data.ns0#Personal_Data.ns0#Contact_Data.ns0#Email_Address_Data.ns0#Email_Address != ''))
-distinctBy $.ns0#Worker_Data.ns0#Personal_Data.ns0#Contact_Data.ns0#Email_Address_Data.ns0#Email_Address)
-else []]]></ee:set-payload>
-            </ee:message>
-        </ee:transform>
 		<batch:job jobName="migrateWorkersBatch" doc:id="79b373e6-1aeb-43a9-9dfe-8ac0d2f31fdc" blockSize="${page.size}">
         <batch:process-records >
             <batch:step name="getWorkersFromServiceNow" doc:id="232087de-e311-49c1-a890-439c65ea1af2" >
-					<ee:transform doc:name="Create getRecords Request" doc:id="10a600ef-755d-4382-8431-50e94fa1ba64">
-						<ee:message>
-							<ee:set-payload><![CDATA[%dw 2.0
+					<ee:transform doc:name="Create getRecords Request" doc:id="8d50e20d-216a-4b43-bf00-7cb8959d591a" >
+						<ee:message >
+							<ee:set-payload ><![CDATA[%dw 2.0
 output application/xml
 ns ns0 http://www.service-now.com/sys_user
 var userAccountData = payload.Worker_Data.User_Account_Data
@@ -85,8 +40,8 @@ output application/java
 payload]]></ee:set-variable>
 						</ee:variables>
 					</ee:transform>
-					<servicenow:invoke doc:name="query user in ServiceNow" doc:id="c12d4342-ac24-4f96-ba45-b5941d59f8da" config-ref="ServiceNow_Config" service="sys_user" operation="getRecords"/>
-					<ee:transform doc:name="Get User ID" doc:id="eb376624-cb1d-45c1-8303-19329e28094b" >
+					<servicenow:invoke service="sys_user" operation="getRecords" doc:name="Query user in ServiceNow" doc:id="71da9c9e-40bc-4a26-a401-b27c6a647a15" config-ref="ServiceNow_Config" />
+					<ee:transform doc:name="Get User ID" doc:id="835b5a3e-7773-4462-83bc-9830f0eb0c96" >
 						<ee:message >
 							<ee:set-payload ><![CDATA[%dw 2.0
 output application/java
@@ -98,7 +53,7 @@ vars.worker ++ {
 					</ee:transform>
             </batch:step>
 				<batch:step name="createUsersInServiceNowStep" doc:id="13d29b30-853d-4c44-92d1-f53749e3e436" acceptExpression="#[payload != null and payload.snowUserId == null]">
-					<ee:transform doc:name="Create insert Request" doc:id="0d45ef31-1598-4216-8b2a-b8f2adf8f5b7" >
+					<ee:transform doc:name="Create insert Request" doc:id="c3c1f7b5-1fc5-4c4a-a61e-1f42198d1cfe" >
 						<ee:message >
 							<ee:set-payload ><![CDATA[%dw 2.0
 output application/xml
@@ -124,10 +79,10 @@ using (personalData = payload.Worker_Data.Personal_Data)
 ]]></ee:set-payload>
 						</ee:message>
 					</ee:transform>
-					<servicenow:invoke doc:name="Insert data" doc:id="6183c574-16e9-4007-956c-113a2702efb9" config-ref="ServiceNow_Config" service="sys_user" operation="insert"/>
+					<servicenow:invoke service="sys_user" operation="insert" doc:name="Insert data" doc:id="6fb1f1c1-cf33-4416-aada-7b15d43d931e" config-ref="ServiceNow_Config" />
 				</batch:step>
 				<batch:step name="updateUsersInServiceNowStep" doc:id="495279da-ca4e-49ec-a805-f7f9c9334950" acceptExpression="#[payload != null and payload.snowUserId != null]">
-					<ee:transform doc:name="Create update Request" doc:id="25b73fcd-2dfa-47b1-a9a3-a8d929a23e10" >
+					<ee:transform doc:name="Create update Request" doc:id="c23b3c3b-074c-4f54-9c05-aa8964177cfc" >
 						<ee:message >
 							<ee:set-payload ><![CDATA[%dw 2.0
 output application/xml
@@ -152,7 +107,7 @@ using (personalData = payload.Worker_Data.Personal_Data)
 }]]></ee:set-payload>
 						</ee:message>
 					</ee:transform>
-					<servicenow:invoke doc:name="Update data" doc:id="1e70d815-8368-42e2-b9e2-9b93f6788822" config-ref="ServiceNow_Config" service="sys_user" operation="update"/>
+					<servicenow:invoke service="sys_user" operation="update" doc:name="Update data" doc:id="9085544b-652e-4d6b-9078-e760725ed15d" config-ref="ServiceNow_Config" />
 				</batch:step>
         </batch:process-records>
         <batch:on-complete >
@@ -189,8 +144,55 @@ using (personalData = payload.Worker_Data.Personal_Data)
         </batch:on-complete>
     </batch:job>
 </flow>
-<flow name="mainFlow" doc:id="7c0a5bef-b3d5-442f-bff3-10d038f69a5e" >
-    <flow-ref doc:name="businessLogicFlow" doc:id="91360ede-4d71-44c7-9b64-8ee762e04ea0" name="businessLogicFlow"/>
+	<sub-flow name="queryFromWorkdaySubFlow" doc:id="d7624637-845f-4600-9b62-34c5095182b9">
+		<ee:transform doc:name="Prepare Get Workers request" doc:id="0e2062da-4a79-471a-bbf5-80038e92ce9b">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/xml
+ns ns0 urn:com.workday/bsvc
+---
+{
+    ns0#Get_Workers_Request: {
+        ns0#Request_Criteria: {
+            ns0#Transaction_Log_Criteria_Data: {
+                ns0#Transaction_Date_Range_Data: {
+                    ns0#Updated_From: p('migration.startDate'),
+                    ns0#Updated_Through: (now() - |PT6S|)
+                }
+            },
+            ns0#Exclude_Inactive_Workers: true,
+            ns0#Exclude_Employees: false,
+            ns0#Exclude_Contingent_Workers: false
+        },
+        ns0#Response_Group: {
+            ns0#Include_Reference: true,
+            ns0#Include_Personal_Information: true,
+            ns0#Include_Transaction_Log_Data: true,
+            ns0#Include_User_Account: true
+        }
+    }
+}]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+		<workday:human-resources doc:name="Query workday for existing employee" doc:id="de602a70-d6a8-4868-ae7a-503ac74c50c8" config-ref="Workday_Config" operation="Get_Workers"/>
+		<ee:transform doc:name="Filter response" doc:id="29e11f39-d7ad-4e29-b095-3d7ea3d22f09">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/java
+ns ns0 urn:com.workday/bsvc
+---
+if (payload.ns0#Get_Workers_Response.ns0#Response_Data != null) 
+    ((payload.ns0#Get_Workers_Response.ns0#Response_Data.*ns0#Worker
+filter ($.ns0#Worker_Data.ns0#Personal_Data.ns0#Contact_Data.ns0#Email_Address_Data.ns0#Email_Address != null 
+and $.ns0#Worker_Data.ns0#Personal_Data.ns0#Contact_Data.ns0#Email_Address_Data.ns0#Email_Address != ''))
+distinctBy $.ns0#Worker_Data.ns0#Personal_Data.ns0#Contact_Data.ns0#Email_Address_Data.ns0#Email_Address)
+else []]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+	</sub-flow>
+	<flow name="mainFlow" doc:id="7c0a5bef-b3d5-442f-bff3-10d038f69a5e" >
+    <flow-ref doc:name="Reference to queryFromWorkdaySubFlow" doc:id="88e1e32a-d922-4f51-8c2f-e6f57fbe1b2a" name="queryFromWorkdaySubFlow"/>
+		<flow-ref doc:name="businessLogicFlow" doc:id="91360ede-4d71-44c7-9b64-8ee762e04ea0" name="businessLogicFlow"/>
     <error-handler >
         <on-error-propagate enableNotifications="true" logException="true" doc:name="On Error Propagate" doc:id="488b507d-e26c-4c56-8759-8bb4f6645d71" type="ANY">
             <flow-ref doc:name="errorHandlingFlow" doc:id="afdaf73c-0137-4d60-84f6-5c41234771a3" name="errorHandlingFlow" />
