@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:email="http://www.mulesoft.org/schema/mule/email" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:ns7="http://www.mulesoft.org/schema/mule/servicenow" xmlns:tls="http://www.mulesoft.org/schema/mule/tls" xmlns:workday="http://www.mulesoft.org/schema/mule/workday" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation=" http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/servicenow http://www.mulesoft.org/schema/mule/servicenow/current/mule-servicenow.xsd http://www.mulesoft.org/schema/mule/workday http://www.mulesoft.org/schema/mule/workday/current/mule-workday.xsd">
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:email="http://www.mulesoft.org/schema/mule/email" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:servicenow="http://www.mulesoft.org/schema/mule/servicenow" xmlns:tls="http://www.mulesoft.org/schema/mule/tls" xmlns:workday="http://www.mulesoft.org/schema/mule/workday" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation=" http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/servicenow http://www.mulesoft.org/schema/mule/servicenow/current/mule-servicenow.xsd http://www.mulesoft.org/schema/mule/workday http://www.mulesoft.org/schema/mule/workday/current/mule-workday.xsd">
 
 <global-property doc:name="Global Property" name="mule.env" value="dev" />
 <configuration-properties file="common.properties" doc:id="b63984ae-cb2c-4055-a95c-fa127256cabe" doc:name="Configuration properties" />
@@ -18,14 +18,14 @@
 </tls:context>
 
 <workday:config-version-30-config name="Workday_Config" doc:name="Workday Config version 30" doc:id="26fbeb49-58e2-4e87-8da1-adedca9e2679">
-    <workday:basic-authentication-api-v30-connection username="${wday.username}" password="${wday.password}" tenantName="${wday.tenant}" hostName="${wday.hostname}" responseTimeout="25000"/>
+    <workday:basic-authentication-api-v30-connection username="${wday.username}" password="${wday.password}" tenantName="${wday.tenant}" hostName="${wday.hostname}" responseTimeout="${wday.responseTimeout}"/>
 </workday:config-version-30-config>
-	
-<ns7:config name="ServiceNow_Config" doc:id="92b59af3-9802-4a08-a1a1-53607f956389" doc:name="ServiceNow Config">
-	<ns7:basic-connection password="${snow.password}" serviceAddress="${snow.endpoint}" serviceNowVersion="JAKARTA" username="${snow.user}">
-		<ns7:transport>
-			<ns7:basic-auth-http-message-dispatcher-provider password="${snow.password}" username="${snow.user}" />
-		</ns7:transport>
-	</ns7:basic-connection>
-</ns7:config>
+
+<servicenow:config name="ServiceNow_Config" doc:id="92b59af3-9802-4a08-a1a1-53607f956389" doc:name="ServiceNow Config">
+	<servicenow:basic-connection password="${snow.password}" serviceAddress="${snow.endpoint}" serviceNowVersion="${snow.serviceNowVersion}" username="${snow.user}">
+		<servicenow:transport>
+			<servicenow:basic-auth-http-message-dispatcher-provider password="${snow.password}" username="${snow.user}" />
+		</servicenow:transport>
+	</servicenow:basic-connection>
+</servicenow:config>
 </mule>
