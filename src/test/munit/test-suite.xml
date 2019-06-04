@@ -78,8 +78,8 @@ else 0]]></ee:set-variable>
 			<set-variable value="#[payload.body.getRecordsResponse.getRecordsResult.active]" doc:name="Store value of record which was updated" doc:id="f7371943-bad8-4777-b304-88f8bb0a53a4" variableName="isActive"/>
 		</munit:execution>
 		<munit:validation >
-			<munit-tools:assert-that doc:name="Assert that quantity of test users has been increased" doc:id="ce25618d-4601-4171-8569-431173a1d3fa" expression="#[vars.newQuantityOfTestUsers]" is="#[MunitTools::equalTo(vars.oldQuantityOfTestUsers + 1)]"/>
-			<munit-tools:assert-that doc:name="Assert that test record is active" doc:id="cc4577eb-182a-48fd-9263-2069984a2780" expression="#[vars.isActive]" is='#[MunitTools::equalTo("1")]'/>
+			<munit-tools:assert-that doc:name="Assert that quantity of test users has been increased" doc:id="ce25618d-4601-4171-8569-431173a1d3fa" expression="#[vars.newQuantityOfTestUsers]" is="#[MunitTools::equalTo(vars.oldQuantityOfTestUsers + 1)]" message="Assert that quantity of test users has been increased has failed"/>
+			<munit-tools:assert-that doc:name="Assert that test record is active" doc:id="cc4577eb-182a-48fd-9263-2069984a2780" expression="#[vars.isActive]" is='#[MunitTools::equalTo("1")]' message="Assert that test record is active has failed"/>
 		</munit:validation>
 	</munit:test>
 	<sub-flow name="queryFromServiceNowForUpdate" doc:id="d94cdb64-b1d6-41cb-a69e-f23c558f4458" >
