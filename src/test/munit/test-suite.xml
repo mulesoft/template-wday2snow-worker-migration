@@ -80,6 +80,21 @@ else 0]]></ee:set-variable>
 		<munit:validation >
 			<munit-tools:assert-that doc:name="Assert that quantity of test users has been increased" doc:id="ce25618d-4601-4171-8569-431173a1d3fa" expression="#[vars.newQuantityOfTestUsers]" is="#[MunitTools::equalTo(vars.oldQuantityOfTestUsers + 1)]" message="Assert that quantity of test users has been increased has failed"/>
 			<munit-tools:assert-that doc:name="Assert that test record is active" doc:id="cc4577eb-182a-48fd-9263-2069984a2780" expression="#[vars.isActive]" is='#[MunitTools::equalTo("1")]' message="Assert that test record is active has failed"/>
+			<ee:transform doc:name="Query for delete  record which was inserted" doc:id="1ed5b7d1-057a-4e10-8ada-5788928b60ef">
+			<ee:message>
+				<ee:set-payload><![CDATA[%dw 2.0
+output application/xml
+ns ns0 http://www.service-now.com/sys_user
+---
+{
+	ns0#deleteRecord: {
+		ns0#"sys_id" : vars.testSysId
+	}
+}]]></ee:set-payload>
+			</ee:message>
+			<ee:variables />
+		</ee:transform>
+			<servicenow:invoke service="sys_user" operation="deleteRecord" doc:name="Delete snow record" doc:id="7814b309-5f0d-4305-9042-29914fe48dc1" config-ref="ServiceNow_Config" />
 		</munit:validation>
 	</munit:test>
 	<sub-flow name="queryFromServiceNowForUpdate" doc:id="d94cdb64-b1d6-41cb-a69e-f23c558f4458" >
@@ -114,22 +129,5 @@ ns0#getRecords: {
 		</ee:transform>
 		<servicenow:invoke service="sys_user" operation="getRecords" doc:name="Query user in ServiceNow" doc:id="128951b8-1194-473d-8348-41f869d9ef78" config-ref="ServiceNow_Config" />
 	</sub-flow>
-	<munit:after-test name="test-suiteAfter_Test" description="After tests actions" doc:id="e241c891-2571-476d-bfdb-e26e28068a11" >
-		<ee:transform doc:name="Query for delete  record which was inserted" doc:id="1ed5b7d1-057a-4e10-8ada-5788928b60ef" >
-			<ee:message >
-				<ee:set-payload ><![CDATA[%dw 2.0
-output application/xml
-ns ns0 http://www.service-now.com/sys_user
----
-{
-	ns0#deleteRecord: {
-		ns0#"sys_id" : vars.testSysId
-	}
-}]]></ee:set-payload>
-			</ee:message>
-			<ee:variables />
-		</ee:transform>
-		<servicenow:invoke service="sys_user" operation="deleteRecord" doc:name="Delete snow record" doc:id="7814b309-5f0d-4305-9042-29914fe48dc1" config-ref="ServiceNow_Config" />
-	</munit:after-test>
 
 </mule>
